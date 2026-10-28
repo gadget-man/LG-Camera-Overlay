@@ -1,0 +1,16 @@
+{
+  "port": 8766,
+  "listenHost": "0.0.0.0",
+  "token": "REPLACE_WITH_64_HEX_CHARACTERS",
+  "ffmpeg": "ffmpeg",
+  "hardwareDecode": "none",
+  "sources": {
+    "entrance": "rtsp://192.0.2.20:554/REPLACE_STREAM_PATH"
+  },
+  "tvs": {
+    "lounge": {
+      "platform": "tizen",
+      "hdmi": 1
+    }
+  }
+}

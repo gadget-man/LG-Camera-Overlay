@@ -1,0 +1,13 @@
+LG Camera Overlay
+Copyright (C) 2026 MBS Integrations contributors
+Own code: GNU GPL version 3 only (GPL-3.0-only); see LICENSE.
+
+JSMpeg by Dominic Szablewski, Copyright (C) 2017, MIT license.
+Pinned upstream commit 924acfbd96fdf15e6748d1368a36d79d8f4cecf6.
+Bundled at source/vendor/jsmpeg.min.js with its original MIT license.
+Upstream: https://github.com/phoboslab/jsmpeg
+
+Node runtime dependencies are installed separately through npm:
+ws (MIT); ssh2 (MIT), with its own dependency license notices.
+The optional official @webos-tools/cli build tool is installed separately.
+FFmpeg is a separately installed system dependency, not bundled in IPK/source assets.

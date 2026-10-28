@@ -11,6 +11,8 @@
 
 Show a live camera panel over what you are watching on an LG webOS TV, including native TV apps and HDMI sources such as Apple TV and NVIDIA SHIELD TV Pro. Home Assistant chooses when it appears; BACK or a timer dismisses it. Camera audio is disabled so the underlying app keeps its sound.
 
+> **Samsung Tizen (experimental, this branch):** shows the camera panel over an HDMI source such as a Sky box on Samsung TVs. It cannot appear over apps built into the TV. See [Samsung Tizen TVs](docs/SAMSUNG-TIZEN.md).
+
 ## What it does
 
 - Shows a live camera in a small panel over your TV programme, without switching away from it or replacing its sound.

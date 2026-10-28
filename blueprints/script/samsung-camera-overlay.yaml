@@ -1,0 +1,82 @@
+blueprint:
+  name: Samsung Camera Overlay - launch one camera on one Tizen TV
+  description: >-
+    Tell the relay which camera to show, then launch the overlay app on an already-on Samsung TV.
+    The app shows the chosen HDMI input full-screen with the camera panel on top.
+    Requires the rest_command.camera_overlay_show snippet from docs/SAMSUNG-TIZEN.md.
+  domain: script
+  author: MBS Integrations
+  source_url: https://github.com/gadget-man/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
+  homeassistant:
+    min_version: '2024.10.0'
+  input:
+    tv:
+      name: Samsung TV
+      selector:
+        entity:
+          filter:
+            - domain: media_player
+              integration: samsungtv
+    tv_id:
+      name: Relay TV ID
+      description: The TV's key under "tvs" in the relay's private/config.json, for example lounge.
+      selector:
+        text: {}
+    camera:
+      name: Relay camera ID
+      description: The camera's key under "sources" in the relay's private/config.json, for example entrance.
+      selector:
+        text: {}
+    label:
+      name: Camera label
+      default: Camera
+      selector:
+        text: {}
+    duration:
+      name: Total display duration
+      default: 30
+      selector:
+        number:
+          min: 15
+          max: 90
+          unit_of_measurement: seconds
+    width:
+      name: Panel width
+      default: 42
+      selector:
+        number:
+          min: 25
+          max: 55
+          unit_of_measurement: '%'
+    hdmi:
+      name: HDMI input behind the panel
+      description: 0 keeps whatever TV source the app finds.
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 4
+    app_id:
+      name: Installed application ID
+      default: MbsCamOvly.CameraOverlay
+      selector:
+        text: {}
+mode: restart
+sequence:
+  - condition: state
+    entity_id: !input tv
+    state: ['on', playing, paused, idle, buffering]
+  - action: rest_command.camera_overlay_show
+    data:
+      tv_id: !input tv_id
+      camera: !input camera
+      label: !input label
+      duration: !input duration
+      width: !input width
+      hdmi: !input hdmi
+  - action: media_player.play_media
+    target:
+      entity_id: !input tv
+    data:
+      media_content_type: app
+      media_content_id: !input app_id

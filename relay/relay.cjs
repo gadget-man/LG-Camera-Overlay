@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 "use strict";
-const fs=require("fs"),path=require("path"),http=require("http"),net=require("net"),{spawn}=require("child_process");
+const fs=require("fs"),path=require("path"),http=require("http"),net=require("net"),crypto=require("crypto"),{spawn}=require("child_process");
 const {WebSocketServer}=require("ws"),{Client}=require("ssh2");
 const {root,conf}=require("./config.cjs").load();
 const tvConfigs=conf.tvs;
@@ -9,7 +9,8 @@ const tvs=new Map(Object.entries(tvConfigs).map(([id,config])=>{
  return [id,{id,config,connection:null,ready:false,retry:null,sessionTimer:null,sessionStatus:null}];
 }));
 if(!tvs.size)throw Error("No TVs configured");
-const streams=new Map(),clients=new Set(),timingPath=path.join(root,"logs/timing.json");
+const streams=new Map(),clients=new Set(),pending=new Map(),timingPath=path.join(root,"logs/timing.json");
+const listenHost=conf.listenHost||"127.0.0.1",localHost=["0.0.0.0","::"].includes(listenHost)?"127.0.0.1":listenHost;
 let stopping=false,lastMetric=null,lastFirstFrame=null,sessionStatus=null;
 let timingHistory=[];try{timingHistory=JSON.parse(fs.readFileSync(timingPath,"utf8")).slice(-99);}catch(e){}
 const devmode=require("./devmode.cjs");
@@ -24,7 +25,9 @@ function sessionSeconds(value){
  if(typeof value!=="string"||!/^\d+:\d{2}:\d{2}$/.test(value))return null;
  const p=value.split(":").map(Number);return p[0]*3600+p[1]*60+p[2];
 }
-async function maintainDevMode(tv=tvs.get("living_room")||tvs.values().next().value){
+function tokenOk(value){const a=Buffer.from(String(value)),b=Buffer.from(String(conf.token));return a.length===b.length&&crypto.timingSafeEqual(a,b);}
+function webosTVs(){return [...tvs.values()].filter(tv=>tv.config.platform!=="tizen");}
+async function maintainDevMode(tv=tvs.get("living_room")||webosTVs()[0]){
  let next=86400000;
  try{
   const checked=await devmode.run(false,tv.config,tv.id),before=sessionSeconds(checked.before.remaining);
@@ -41,7 +44,7 @@ async function maintainDevMode(tv=tvs.get("living_room")||tvs.values().next().va
   next=3600000;tv.sessionStatus={checked_at:new Date().toISOString(),success:false,error:"Session check failed; retry in one hour"};
   log("devmode_session_check_failed",{tv_id:tv.id});
  }
- if(tv===tvs.values().next().value)sessionStatus=tv.sessionStatus;
+ if(tv===webosTVs()[0])sessionStatus=tv.sessionStatus;
  if(!stopping)tv.sessionTimer=setTimeout(()=>maintainDevMode(tv),next).unref();
 }
 function stopStream(group){
@@ -89,14 +92,44 @@ function health(){
   node_rss_mb:Math.round(process.memoryUsage().rss/1048576)
  };
 }
+function bounded(value,low,high){value=Number(value);return Number.isFinite(value)&&value>0?Math.max(low,Math.min(high,value)):undefined;}
+function showRequest(tvId,m){
+ // Launch parameters for a Tizen TV, collected by its app on startup. Unknown fields are dropped.
+ if(!m||typeof m!=="object"||!Object.prototype.hasOwnProperty.call(conf.sources,m.camera))return null;
+ const tv=tvs.get(tvId).config,value={camera:m.camera,label:typeof m.label==="string"?m.label.slice(0,60):"Camera",sentAt:Date.now()};
+ const duration=bounded(m.duration,15,90),width=bounded(m.width,25,55),hdmi=Number.isInteger(m.hdmi)&&m.hdmi>=0&&m.hdmi<=4?m.hdmi:tv.hdmi;
+ if(duration)value.duration=duration;if(width)value.width=width;if(hdmi!==undefined)value.hdmi=hdmi;
+ if(Number.isFinite(Number(m.detectedAt))&&Number(m.detectedAt)>0)value.detectedAt=Number(m.detectedAt);
+ return value;
+}
 const server=http.createServer((req,res)=>{
  if(req.method==="GET"&&req.url==="/health"){res.writeHead(200,{"Content-Type":"application/json","Cache-Control":"no-store"});return res.end(JSON.stringify(health()));}
+ const pieces=(req.url||"").split("/"),tvId=pieces[3];
+ if(pieces.length===4&&["show","pending"].includes(pieces[1])){
+  if(!tokenOk(pieces[2])||!tvs.has(tvId)){res.writeHead(403);return res.end();}
+  if(pieces[1]==="pending"&&req.method==="GET"){
+   const value=pending.get(tvId);pending.delete(tvId);
+   const headers={"Access-Control-Allow-Origin":"*","Cache-Control":"no-store"};
+   if(!value||Date.now()-value.sentAt>60000){res.writeHead(204,headers);return res.end();}
+   res.writeHead(200,{...headers,"Content-Type":"application/json"});return res.end(JSON.stringify(value));
+  }
+  if(pieces[1]==="show"&&req.method==="POST"){
+   let body="";
+   req.on("data",chunk=>{body+=chunk;if(body.length>2048){res.writeHead(413);res.end();req.destroy();}});
+   req.on("end",()=>{
+    if(res.writableEnded)return;let value=null;try{value=showRequest(tvId,JSON.parse(body));}catch(e){}
+    if(!value){res.writeHead(400);return res.end();}
+    pending.set(tvId,value);log("show_requested",{tv_id:tvId,camera:value.camera});res.writeHead(204);res.end();
+   });
+   return;
+  }
+ }
  res.writeHead(404);res.end();
 });
 const wss=new WebSocketServer({noServer:true,maxPayload:2048,perMessageDeflate:false});
 server.on("upgrade",(req,socket,head)=>{
  const pieces=(req.url||"").split("/"),camera=pieces[3],tvId=pieces[4];
- if(pieces.length!==5||pieces[1]!=="live"||pieces[2]!==conf.token||!Object.prototype.hasOwnProperty.call(conf.sources,camera)||!tvs.has(tvId)){
+ if(pieces.length!==5||pieces[1]!=="live"||!tokenOk(pieces[2])||!Object.prototype.hasOwnProperty.call(conf.sources,camera)||!tvs.has(tvId)){
   socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");return;
  }
  wss.handleUpgrade(req,socket,head,ws=>wss.emit("connection",ws,camera,tvId));
@@ -135,7 +168,7 @@ function connectTV(tv){
  }));
  connection.on("tcp connection",(info,accept,reject)=>{
   if(info.destIP!=="127.0.0.1"||info.destPort!==conf.port){reject();return;}
-  const channel=accept(),socket=net.connect(conf.port,"127.0.0.1");
+  const channel=accept(),socket=net.connect(conf.port,localHost);
   channel.pipe(socket).pipe(channel);channel.on("error",()=>socket.destroy());socket.on("error",()=>channel.destroy());
  });
  connection.on("error",()=>{});connection.on("close",()=>scheduleReconnect(tv));
@@ -150,7 +183,7 @@ function shutdown(){
 }
 process.on("SIGINT",shutdown);process.on("SIGTERM",shutdown);
 server.on("error",err=>{log("listener_error",{code:err.code});shutdown();});
-server.listen(conf.port,"127.0.0.1",()=>{
- log("relay_ready");let stagger=0;
- for(const tv of tvs.values()){connectTV(tv);if(conf.renewDeveloperMode)tv.sessionTimer=setTimeout(()=>maintainDevMode(tv),5000+stagger).unref();stagger+=1000;}
+server.listen(conf.port,listenHost,()=>{
+ log("relay_ready",{listen:listenHost});let stagger=0;
+ for(const tv of tvs.values()){if(tv.config.platform==="tizen"){tv.ready=true;continue;}connectTV(tv);if(conf.renewDeveloperMode)tv.sessionTimer=setTimeout(()=>maintainDevMode(tv),5000+stagger).unref();stagger+=1000;}
 });

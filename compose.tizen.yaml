@@ -1,0 +1,7 @@
+# Samsung Tizen TVs connect to the relay over the LAN (no SSH tunnel), so publish the port.
+# Use with: docker compose -f compose.yaml -f compose.tizen.yaml up -d --build
+# Set "listenHost": "0.0.0.0" in private/config.json. The token is the only protection: keep it private.
+services:
+  camera-overlay:
+    ports:
+      - "8766:8766"

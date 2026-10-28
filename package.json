@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node relay/relay.cjs",
-    "test": "node tests/overlay.cjs && node tests/multitv.cjs && node --test tests/config.test.cjs tests/setup.test.cjs",
+    "test": "node tests/overlay.cjs && node tests/multitv.cjs && node tests/tizen-overlay.cjs && node tests/tizen-relay.cjs && node --test tests/config.test.cjs tests/setup.test.cjs",
     "check": "node scripts/check-config.cjs",
     "build": "node scripts/build.cjs",
     "pair": "node scripts/pair.cjs",
@@ -16,7 +16,8 @@
     "setup:preview": "node setup/server.cjs --preview",
     "test:setup": "node --test tests/setup.test.cjs",
     "build:review": "node scripts/build-review.cjs",
-    "build:setup": "node scripts/build-review.cjs --release"
+    "build:setup": "node scripts/build-review.cjs --release",
+    "build:tizen": "node scripts/build-tizen.cjs"
   },
   "dependencies": {
     "ssh2": "1.17.0",
