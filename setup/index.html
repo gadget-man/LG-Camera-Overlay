@@ -25,7 +25,7 @@
       <div class="sidebar-foot">
         <p>A little more awareness.<br />Without missing the moment.</p>
         <small
-          >Version 1.1.0<br />Settings stay private in this
+          >Version 1.2.0<br />Settings stay private in this
           configurator.</small
         >
       </div>
@@ -258,6 +258,8 @@
                 Camera sound is muted. Your programme keeps playing underneath.
                 BACK dismisses the panel.
               </p>
+              <label class="check"><input id="dismiss-screensaver" type="checkbox" />Restore the TV screen before camera alerts</label>
+              <p class="small">Optional. Dismisses the LG screensaver; may also restore an intentionally blanked screen. Only runs while Home Assistant reports the TV active. Tested on OLED65B9PLA, including with Home Launcher underneath. Other TVs need a viewing check. Does not send HOME/BACK or change screensaver settings.</p>
             </div>
           </section>
           <section data-page="4" hidden>
@@ -324,7 +326,9 @@
               </button>
               <p class="small">
                 Automatic person, vehicle and doorbell alerts remain a separate
-                HA setup step.
+                HA setup step. You can also add a Pause camera overlays toggle
+                and use the pause/resume blueprint for quiet hours.
+                <a href="https://github.com/mbsintegrations/LG-Camera-Overlay/blob/main/docs/HOME-ASSISTANT.md#pause--resume-and-manual-camera-selection" target="_blank" rel="noopener noreferrer">Set up alerts and pause/resume ↗</a>
               </p>
             </div>
           </section>

@@ -44,6 +44,11 @@ const positions = [
   "bottom-left",
   "center",
 ];
+function dismissScreensaver(value = {}) {
+  const enabled = value.dismissScreensaver ?? false;
+  if (typeof enabled !== "boolean") fail("Choose screensaver dismissal on or off.");
+  return enabled;
+}
 function panel(value = {}) {
   const p = {
     label: value.label ?? "Entrance",
@@ -228,9 +233,10 @@ class Store {
           stream: launch.payload.params.stream,
           ...panel(body),
           app_id: appId(),
+          dismiss_screensaver: dismissScreensaver(body),
         },
       },
     };
   }
 }
-module.exports = { Store, atomic, fail, id, cameraURL, panel, appId };
+module.exports = { Store, atomic, fail, id, cameraURL, panel, appId, dismissScreensaver };

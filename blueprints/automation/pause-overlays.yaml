@@ -1,0 +1,61 @@
+blueprint:
+  name: LG Camera Overlay - automatic pause and resume
+  description: >-
+    Follow a schedule, toggle or binary sensor: on pauses automatic camera alerts,
+    off resumes them. Select the same Pause camera overlays Toggle helper in each
+    alert coordinator. Manual camera scripts remain available. This never enables
+    or disables automations, closes a visible panel or controls the TV.
+  domain: automation
+  author: MBS Integrations
+  source_url: https://github.com/mbsintegrations/LG-Camera-Overlay/blob/main/blueprints/automation/pause-overlays.yaml
+  homeassistant:
+    min_version: '2024.10.0'
+  input:
+    pause_source:
+      name: When should overlays be paused?
+      description: Choose a Schedule helper for quiet hours, a separate Toggle helper, or a binary sensor. On means paused; off means resumed. Do not select the output helper below.
+      selector:
+        entity:
+          domain:
+            - schedule
+            - input_boolean
+            - binary_sensor
+    pause_helper:
+      name: Pause camera overlays
+      description: The dedicated Toggle helper selected in your camera alert coordinator(s).
+      selector:
+        entity:
+          domain: input_boolean
+mode: restart
+variables:
+  pause_source: !input pause_source
+  pause_helper: !input pause_helper
+triggers:
+  - trigger: state
+    entity_id: !input pause_source
+    to: 'on'
+  - trigger: state
+    entity_id: !input pause_source
+    to: 'off'
+  - trigger: homeassistant
+    event: start
+actions:
+  - condition: template
+    value_template: "{{ pause_source != pause_helper }}"
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input pause_source
+            state: 'on'
+        sequence:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: !input pause_helper
+      - conditions:
+          - condition: state
+            entity_id: !input pause_source
+            state: 'off'
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input pause_helper

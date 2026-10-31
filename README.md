@@ -1,7 +1,7 @@
 # LG Camera Overlay
 
 [![Validation](https://github.com/mbsintegrations/LG-Camera-Overlay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mbsintegrations/LG-Camera-Overlay/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/mbsintegrations/LG-Camera-Overlay?cacheSeconds=300&v=1.1.0)](https://github.com/mbsintegrations/LG-Camera-Overlay/releases)
+[![Release](https://img.shields.io/github/v/release/mbsintegrations/LG-Camera-Overlay?cacheSeconds=300&v=1.2.0)](https://github.com/mbsintegrations/LG-Camera-Overlay/releases)
 [![GitHub stars](https://img.shields.io/github/stars/mbsintegrations/LG-Camera-Overlay?style=flat&logo=github)](https://github.com/mbsintegrations/LG-Camera-Overlay)
 [![NAS Docker tested](https://img.shields.io/badge/NAS_Docker-tested-2ea44f)](docs/VALIDATION.md#configurator-and-nas-docker-acceptance-25-october-2026)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
@@ -16,6 +16,7 @@ Show a live camera panel over what you are watching on an LG webOS TV, including
 - Shows a live camera in a small panel over your TV programme, without switching away from it or replacing its sound.
 - Lets Home Assistant show the panel from a dashboard button or an automation, such as a person detection or doorbell press.
 - Closes automatically after your chosen time, or when you press BACK on the TV remote.
+- In 1.2.0: choose the panel's position, border and compact style; pause automatic alerts with a shared HA helper; optionally dismiss LG's screensaver before an alert. See [setup and upgrade instructions](docs/HOME-ASSISTANT.md#updates) and [model-specific test results](docs/VALIDATION.md).
 
 ## What you need
 
@@ -41,11 +42,11 @@ flowchart LR
   Events[Person / vehicle / doorbell] --> HA
 ```
 
-The TV app, relay and Home Assistant configuration are three separate installation steps. This uses HA's native **LG webOS TV** integration; no custom HA integration or HACS installation is needed. The relay runs on an always-available computer or locally built Docker container, which can share a Linux/NAS host with Home Assistant. **v1.1.0 adds the local configurator and private deployment export. The separate HA OS App package is experimental and has NOT been tested.** See [hosting on HA hardware and hardware recommendations](docs/HOSTING.md) for the available options and their limits.
+The TV app, relay and Home Assistant configuration are three separate installation steps. This uses HA's native **LG webOS TV** integration; no custom HA integration or HACS installation is needed. The relay runs on an always-available computer or locally built Docker container, which can share a Linux/NAS host with Home Assistant. **v1.2.0 adds panel appearance controls and an automatic pause/resume blueprint. The separate HA OS App package is experimental and has NOT been tested.** See [hosting on HA hardware and hardware recommendations](docs/HOSTING.md) for the available options and their limits.
 
 ## Guided installation
 
-Download **LG-Camera-Overlay-Setup-1.1.0.zip** from [v1.1.0](https://github.com/mbsintegrations/LG-Camera-Overlay/releases/tag/v1.1.0), extract it and open **Start Setup.cmd** on Windows (Node.js LTS 22+ required). Mac/Linux use `sh "Start Setup.command"`. The wizard guides TV pairing and app installation, camera settings, panel preview, HA script creation and private Docker export. The permanent relay still needs Docker or Node/FFmpeg; setup is not an unattended service installer.
+Download **LG-Camera-Overlay-Setup-1.2.0.zip** from [v1.2.0](https://github.com/mbsintegrations/LG-Camera-Overlay/releases/tag/v1.2.0), extract it and open **Start Setup.cmd** on Windows (Node.js LTS 22+ required). Mac/Linux use `sh "Start Setup.command"`. The wizard guides TV pairing and app installation, camera settings, panel preview, HA script creation and private Docker export. The permanent relay still needs Docker or Node/FFmpeg; setup is not an unattended service installer.
 
 ![Configurator host selection with sample television preview](docs/images/setup-01-host.png)
 

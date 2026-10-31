@@ -7,6 +7,13 @@ blueprint:
   homeassistant:
     min_version: '2024.10.0'
   input:
+    pause_helper:
+      name: Pause camera overlays (optional)
+      description: Select a Toggle helper. When on, normal and priority alerts are blocked. Leave empty to keep existing behaviour. Manual camera scripts remain available.
+      default: []
+      selector:
+        entity:
+          domain: input_boolean
     detection_triggers:
       name: Normal detection triggers
       description: Choose actual person/vehicle/motion triggers. Avoid broad motion if you want smart detections only.
@@ -45,10 +52,17 @@ blueprint:
 mode: queued
 max: 10
 max_exceeded: silent
+variables:
+  pause_helper: !input pause_helper
 triggers:
   - triggers: !input detection_triggers
   - triggers: !input priority_triggers
+conditions:
+  - condition: template
+    value_template: "{{ not pause_helper or is_state(pause_helper, 'off') }}"
 actions:
+  - condition: template
+    value_template: "{{ not pause_helper or is_state(pause_helper, 'off') }}"
   - choose:
       - conditions:
           - condition: trigger

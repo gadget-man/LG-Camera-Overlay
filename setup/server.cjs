@@ -5,7 +5,7 @@ const http = require("node:http"),
   path = require("node:path"),
   os = require("node:os"),
   crypto = require("node:crypto");
-const { Store, fail, id, panel, appId } = require("./store.cjs"),
+const { Store, fail, id, panel, appId, dismissScreensaver } = require("./store.cjs"),
   devices = require("./devices.cjs"),
   { Runtime, haConnect, haLaunch } = require("./runtime.cjs"),
   deployment = require("./deployment.cjs");
@@ -46,7 +46,7 @@ function createServer(options = {}) {
   function artifact() {
     const file = path.resolve(
         __dirname,
-        "../dist/" + appId() + "_1.0.0_all.ipk",
+        "../dist/" + appId() + "_1.2.0_all.ipk",
       ),
       manifest = path.resolve(__dirname, "../dist/SHA256SUMS.txt");
     if (!fs.existsSync(file) || !fs.existsSync(manifest))
@@ -58,7 +58,7 @@ function createServer(options = {}) {
     const match = fs
       .readFileSync(manifest, "utf8")
       .split(/\r?\n/)
-      .find((l) => l.trim().split(/\s+/)[1] === appId() + "_1.0.0_all.ipk");
+      .find((l) => l.trim().split(/\s+/)[1] === appId() + "_1.2.0_all.ipk");
     if (!match || match.split(/\s+/)[0] !== actual)
       fail("The TV package checksum does not match.");
     return file;
@@ -240,7 +240,7 @@ function createServer(options = {}) {
             send(
               res,
               200,
-              await (options.haLaunch || haLaunch)(connection, store.launch(b)),
+              await (options.haLaunch || haLaunch)(connection, store.launch(b), dismissScreensaver(b)),
             );
             return;
           }
@@ -262,7 +262,7 @@ function createServer(options = {}) {
             const state = store.summary(),
               status = await runtime.status();
             send(res, 200, {
-              version: "1.1.0",
+              version: "1.2.0",
               platform: process.platform,
               node: process.versions.node,
               ready: state.ready,

@@ -5,7 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
 COPY relay ./relay
 COPY setup ./setup
-COPY dist/com.mbs.cameraoverlay_1.0.0_all.ipk dist/SHA256SUMS.txt ./dist/
+COPY dist/com.mbs.cameraoverlay_1.2.0_all.ipk dist/SHA256SUMS.txt ./dist/
 ENV OVERLAY_DATA_DIR=/data
 USER node
 CMD ["node", "setup/server.cjs", "--container-local", "--managed"]

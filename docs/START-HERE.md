@@ -1,6 +1,6 @@
 # Choose your setup: Docker installation
 
-**Prefer the graphical setup? Use the [illustrated configurator guide](CONFIGURATOR.md).** It saves settings and generates the private Docker bundle for you. The manual route below remains available, including the existing v1.0.0 source instructions.
+**Prefer the graphical setup? Use the [illustrated configurator guide](CONFIGURATOR.md).** It saves settings and generates the private Docker bundle for you. The manual route below remains available, using the same 1.2.0 setup/source package.
 
 Before setup, review [LG TV privacy and network protection](PRIVACY-AND-NETWORK.md).
 
@@ -91,27 +91,27 @@ Leave your working HA installation in place. Run the relay as its **own Docker C
 
 ## 2. Download the project
 
-1. Open the [v1.0.0 release](https://github.com/mbsintegrations/LG-Camera-Overlay/releases/tag/v1.0.0).
-2. Under **Assets**, download these three files: `LG-Camera-Overlay-1.0.0-source.zip`, `com.mbs.cameraoverlay_1.0.0_all.ipk` and `SHA256SUMS.txt`. Use the named source ZIP rather than GitHub's automatically generated source archive, so the checksum matches.
+1. Open the [v1.2.0 release](https://github.com/mbsintegrations/LG-Camera-Overlay/releases/tag/v1.2.0).
+2. Under **Assets**, download these three files: `LG-Camera-Overlay-Setup-1.2.0.zip`, `com.mbs.cameraoverlay_1.2.0_all.ipk` and `SHA256SUMS.txt`. Use the named source ZIP rather than GitHub's automatically generated source archive, so the checksum matches.
 3. In PowerShell or Terminal, type `cd ` (with a space), drag your download folder into the window, and press Enter. If the path contains spaces, enclose it in double quotes. Verify the two downloads using your system's commands below. Compare the long values with the matching lines in `SHA256SUMS.txt`; letter case does not matter. If they differ, stop and download again.
 
 **Windows:**
 
 ```powershell
-Get-FileHash LG-Camera-Overlay-1.0.0-source.zip -Algorithm SHA256
-Get-FileHash com.mbs.cameraoverlay_1.0.0_all.ipk -Algorithm SHA256
+Get-FileHash LG-Camera-Overlay-Setup-1.2.0.zip -Algorithm SHA256
+Get-FileHash com.mbs.cameraoverlay_1.2.0_all.ipk -Algorithm SHA256
 ```
 
 **Mac:**
 
 ```sh
-shasum -a 256 LG-Camera-Overlay-1.0.0-source.zip com.mbs.cameraoverlay_1.0.0_all.ipk
+shasum -a 256 LG-Camera-Overlay-Setup-1.2.0.zip com.mbs.cameraoverlay_1.2.0_all.ipk
 ```
 
 **Linux:**
 
 ```sh
-sha256sum LG-Camera-Overlay-1.0.0-source.zip com.mbs.cameraoverlay_1.0.0_all.ipk
+sha256sum LG-Camera-Overlay-Setup-1.2.0.zip com.mbs.cameraoverlay_1.2.0_all.ipk
 ```
 
 4. Extract the ZIP using your file manager. Put the extracted project in a permanent folder you own, outside cloud-sync folders or public shares. It will contain private camera and TV access details later.
@@ -122,7 +122,7 @@ sha256sum LG-Camera-Overlay-1.0.0-source.zip com.mbs.cameraoverlay_1.0.0_all.ipk
 1. On the LG, install **Developer Mode** from LG Apps and sign in with a free [LG Developer account](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app).
 2. Enable **Dev Mode Status** and allow the TV to restart. Reopen Developer Mode, enable **Key Server**, and privately note its IP address and passphrase. Keep the TV on during setup.
 3. On your computer, download and open [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases). This is a separate community tool. Add the TV using its IP address and Developer Mode passphrase.
-4. Use Dev Manager's app installation option to select the downloaded `com.mbs.cameraoverlay_1.0.0_all.ipk`.
+4. Use Dev Manager's app installation option to select the downloaded `com.mbs.cameraoverlay_1.2.0_all.ipk`.
 
 **Success:** Camera Overlay appears in the installed app list. Opening it alone may say **No stream** and close: this is expected before HA supplies a camera route. Plex on Apple TV still uses the app on the **LG**, not an app installed on Apple TV.
 

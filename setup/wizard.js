@@ -56,6 +56,7 @@ function values() {
     fps: $("fps").checked,
     border: $("border").checked,
     compact: $("compact").checked,
+    dismissScreensaver: $("dismiss-screensaver").checked,
     tv: $("route-tv").value,
     camera: $("route-camera").value,
     entity: $("ha-entity").value,
@@ -185,6 +186,7 @@ function update() {
   $("camera-panel").classList.toggle("compact", $("compact").checked);
   $("panel-status").textContent = $("fps").checked ? "LIVE · 25 fps" : "LIVE";
   $("margin-value").textContent = m + "%";
+  $("margin").disabled = $("position").value === "center";
   $("width-value").textContent = $("width").value + "%";
   $("duration-value").textContent = $("duration").value + " seconds";
   $("panel-duration").textContent =
@@ -193,7 +195,7 @@ function update() {
   $("deploy-help").textContent =
     selection() === "haos"
       ? "EXPERIMENTAL — NOT TESTED on HA OS. Install the experimental package only in a disposable HA OS system. No one-click App repository is supplied."
-      : "Build or load the lg-camera-overlay:1.1.0 image on your relay host first, then extract the private bundle into a new folder. Follow the illustrated configurator guide for startup and folder permissions.";
+      : "Build or load the lg-camera-overlay:1.2.0 image on your relay host first, then extract the private bundle into a new folder. Follow the illustrated configurator guide for startup and folder permissions.";
 }
 function navigate(n) {
   step = Math.max(0, Math.min(5, n));
@@ -237,7 +239,7 @@ document
 $("next").onclick = () => navigate(step + 1);
 $("back").onclick = () => navigate(step - 1);
 for (const el of document.querySelectorAll(
-  "input[name=host],#label,#width,#duration,#position,#margin,#border,#border-color,#fps,#compact,#ha-location",
+  "input[name=host],#label,#width,#duration,#position,#margin,#border,#border-color,#fps,#compact,#ha-location,#dismiss-screensaver",
 ))
   el.addEventListener("input", update);
 $("profile").onchange = () => {
@@ -354,7 +356,7 @@ action("save-settings", async () => {
 });
 action("test-tv", async () => {
   const v = { ...values(), duration: 30 };
-  if (!confirm("Show " + v.camera + " on " + v.entity + " for 30 seconds now?"))
+  if (!confirm("Show " + v.camera + " on " + v.entity + " for 30 seconds now?" + (v.dismissScreensaver ? " This will restore the TV screen first." : "")))
     return;
   await api("ha/test", { ...v, confirm: true });
   $("test-result").textContent =
@@ -404,6 +406,7 @@ $("profile-file").onchange = async () => {
       host: p.host,
       haLocation: p.haLocation,
       ...p.panel,
+      dismissScreensaver: p.dismissScreensaver ?? false,
     });
     document.querySelector(`input[name=host][value="${result.host}"]`).checked =
       true;
@@ -414,6 +417,7 @@ $("profile-file").onchange = async () => {
     $("border").checked = result.panel.border;
     $("fps").checked = result.panel.fps;
     $("compact").checked = result.panel.compact;
+    $("dismiss-screensaver").checked = result.dismissScreensaver ?? false;
     update();
     message("Layout imported. No saved connections were changed.");
   } catch (e) {

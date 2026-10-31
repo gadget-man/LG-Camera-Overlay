@@ -94,8 +94,34 @@ blueprint:
       default: com.mbs.cameraoverlay
       selector:
         text: {}
+    dismiss_screensaver:
+      name: Restore screen before showing the camera
+      description: >-
+        Optional screen-on command for an already-active TV. Dismisses the LG
+        screensaver and may restore an intentionally blanked screen. Tested on
+        OLED65B9PLA; verify on your model. Does not send HOME/BACK or change
+        screensaver settings. Leave off to preserve existing behaviour.
+      default: false
+      selector:
+        boolean: {}
 mode: restart
+variables:
+  restore_screen: !input dismiss_screensaver
 sequence:
+  - condition: state
+    entity_id: !input tv
+    state: ['on', playing, paused, idle, buffering]
+  - if:
+      - condition: template
+        value_template: '{{ restore_screen }}'
+    then:
+      - action: webostv.command
+        target:
+          entity_id: !input tv
+        data:
+          command: com.webos.service.tvpower/power/turnOnScreen
+      - delay:
+          milliseconds: 1500
   - condition: state
     entity_id: !input tv
     state: ['on', playing, paused, idle, buffering]

@@ -10,7 +10,9 @@ Have these ready: your LG Developer Mode account and TV address, a camera stream
 
 ## Before you start: download and open setup
 
-Download **LG-Camera-Overlay-Setup-1.1.0.zip** from [release v1.1.0](https://github.com/mbsintegrations/LG-Camera-Overlay/releases/tag/v1.1.0). Extract the ZIP into a new folder; do not run it from inside the ZIP. This download includes the verified TV package, setup screens, relay source and guides. The TV package remains version 1.0.0; 1.1.0 adds the installer/configurator.
+**Already using an earlier release?** Follow the [upgrade steps](HOME-ASSISTANT.md#upgrade-from-100-or-110) to preserve your private settings and existing Launcher setup.
+
+Download **LG-Camera-Overlay-Setup-1.2.0.zip** from [release v1.2.0](https://github.com/mbsintegrations/LG-Camera-Overlay/releases/tag/v1.2.0). Extract the ZIP into a new folder; do not run it from inside the ZIP. This download includes the verified TV package, setup screens, relay source and guides. The TV app and setup package both use version 1.2.0. Updating the TV app is required for the new appearance controls.
 
 Install **Node.js LTS 22 or newer** from [nodejs.org](https://nodejs.org/en/download). Then:
 
@@ -77,6 +79,8 @@ Home Assistant must already have its native **LG webOS TV** integration paired t
 
 You can disconnect HA or close setup to discard the session token. Revoke a token in HA when no longer needed. Automatic detection alerts are a separate step: follow [UniFi and other detection flows](DETECTION-FLOW.md) and [Home Assistant setup](HOME-ASSISTANT.md).
 
+For quiet hours, follow [Pause / Resume](HOME-ASSISTANT.md#pause--resume-and-manual-camera-selection). Create a **Pause camera overlays** Toggle helper and select it in each alert coordinator. The optional pause/resume blueprint can follow a Schedule helper automatically. Manual camera buttons remain available while alerts are paused.
+
 ![Home Assistant connection and script creation](images/setup-05-ha.png)
 
 ## 6. Finish & test — install and check the relay
@@ -88,7 +92,7 @@ Choose **Download private installation bundle** in **Finish & test**. It contain
 Open a terminal in the extracted **setup/source download** and build the image once:
 
 ```sh
-docker build -t lg-camera-overlay:1.1.0 .
+docker build -t lg-camera-overlay:1.2.0 .
 ```
 
 Then open a terminal in the extracted **private installation bundle** and start it:
@@ -98,7 +102,7 @@ docker compose up -d
 docker compose logs --tail 50
 ```
 
-The image is built locally; no prebuilt registry image is supplied. For a different Docker host of the same architecture, `docker save -o camera-overlay-image.tar lg-camera-overlay:1.1.0` and `docker load -i camera-overlay-image.tar` transfer the built image. An Intel/AMD image is not an ARM image.
+The image is built locally; no prebuilt registry image is supplied. For a different Docker host of the same architecture, `docker save -o camera-overlay-image.tar lg-camera-overlay:1.2.0` and `docker load -i camera-overlay-image.tar` transfer the built image. An Intel/AMD image is not an ARM image.
 
 On Linux/NAS the container runs as **UID 1000**. That user needs read access to the private configuration/keys and write access to `private` and `logs`. On Linux, from the private runtime folder, an administrator can run `sudo chown -R 1000:1000 private logs` and `sudo chmod 700 private logs`. On a NAS, use its supported folder ownership/permission controls or ask its administrator. Do not make these folders publicly readable to fix permission errors.
 
@@ -119,6 +123,8 @@ On Linux/NAS the container runs as **UID 1000**. That user needs read access to 
 If setup runs inside Docker alongside HA Container, use HA's reachable address. In our NAS test, the host's published HA port was unreachable from another Docker bridge; attaching the review container to **only the HA test network** and using HA's container name resolved it. Keep the host setup UI local: the optional setup image must publish only `127.0.0.1:8786:8786` and use an SSH forward for remote access. The simpler route is to run the configurator on your desktop and export the NAS bundle.
 
 ### Watch the test before enabling alerts
+
+For LG screensavers, step 4 offers **Restore the TV screen before camera alerts**. It is off by default and is included in generated scripts and saved layouts. It sends screen-on, waits briefly and launches only while HA reports the TV active. It can restore an intentionally blanked screen too. This was physically confirmed on OLED65B9PLA, including an overlay above Home Launcher; other models need a viewing test. It does not disable the screensaver permanently. See [screensaver behaviour and limits](HOME-ASSISTANT.md#optional-screensaver-dismissal).
 
 Turn on the TV, start a programme and be in the room watching it. Start the deployed relay first, then choose **Show camera on selected TV** and confirm. It does not wake an unavailable/off TV. Check moving camera video, continuing programme picture/sound, automatic close and BACK on a second run.
 
