@@ -223,7 +223,37 @@
                 >How long should it stay?
                 <output id="duration-value">30 seconds</output
                 ><input type="range" id="duration" min="15" max="90" value="30"
-              /></label>
+              /></label
+              ><label class="field"
+                >Where should it appear?<select id="position">
+                  <option value="top-right">Top right</option>
+                  <option value="top-left">Top left</option>
+                  <option value="bottom-right">Bottom right</option>
+                  <option value="bottom-left">Bottom left</option>
+                  <option value="center">Centre</option>
+                </select></label
+              ><label class="field"
+                >Distance from the screen edge
+                <output id="margin-value">3%</output
+                ><input type="range" id="margin" min="0" max="10" value="3"
+              /></label
+              ><label class="check"
+                ><input id="border" type="checkbox" checked />Show a border
+                around the panel.</label
+              ><label class="field"
+                >Border colour<input
+                  type="color"
+                  id="border-color"
+                  value="#67dfad"
+              /></label
+              ><label class="check"
+                ><input id="fps" type="checkbox" checked />Show the frame rate
+                next to LIVE.</label
+              ><label class="check"
+                ><input id="compact" type="checkbox" />Compact: show the title
+                and countdown over the camera picture on a translucent
+                background.</label
+              >
               <p>
                 Camera sound is muted. Your programme keeps playing underneath.
                 BACK dismisses the panel.
@@ -378,7 +408,8 @@
             </div>
             <div class="overlay" id="camera-panel">
               <div class="overlay-top">
-                <span id="panel-label">Entrance</span><small>SAMPLE</small>
+                <span id="panel-label">Entrance</span
+                ><small id="panel-status">LIVE · 25 fps</small>
               </div>
               <div class="camera-scene">
                 <div class="house"></div>

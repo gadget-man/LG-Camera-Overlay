@@ -40,6 +40,55 @@ blueprint:
           min: 25
           max: 55
           unit_of_measurement: '%'
+    position:
+      name: Panel position
+      default: top-right
+      selector:
+        select:
+          options:
+            - label: Top right
+              value: top-right
+            - label: Top left
+              value: top-left
+            - label: Bottom right
+              value: bottom-right
+            - label: Bottom left
+              value: bottom-left
+            - label: Centre
+              value: center
+    margin:
+      name: Distance from the screen edge
+      description: Ignored for the centre position.
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 10
+          unit_of_measurement: '% of screen width'
+    border:
+      name: Show border
+      description: Draw a border around the panel.
+      default: true
+      selector:
+        boolean: {}
+    borderColor:
+      name: Border colour
+      description: Border colour as '#rrggbb'.
+      default: '#67dfad'
+      selector:
+        text: {}
+    fps:
+      name: Show frame rate
+      description: Show the frame rate next to LIVE.
+      default: true
+      selector:
+        boolean: {}
+    compact:
+      name: Compact panel
+      description: Show the title and countdown over the camera picture on a translucent background.
+      default: false
+      selector:
+        boolean: {}
     app_id:
       name: Installed application ID
       default: com.mbs.cameraoverlay
@@ -62,4 +111,10 @@ sequence:
           label: !input label
           duration: !input duration
           width: !input width
+          position: !input position
+          margin: !input margin
+          border: !input border
+          borderColor: !input borderColor
+          fps: !input fps
+          compact: !input compact
           sentAt: '{{ (as_timestamp(now()) * 1000) | int }}'

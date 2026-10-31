@@ -37,12 +37,38 @@ function cameraURL(value) {
   }
   return value;
 }
+const positions = [
+  "top-right",
+  "top-left",
+  "bottom-right",
+  "bottom-left",
+  "center",
+];
 function panel(value = {}) {
   const p = {
     label: value.label ?? "Entrance",
     width: Number(value.width ?? 42),
     duration: Number(value.duration ?? 30),
+    position: value.position ?? "top-right",
+    borderColor: String(value.borderColor ?? "#67dfad").toLowerCase(),
+    compact: value.compact ?? false,
+    margin: Number(value.margin ?? 3),
+    border: value.border ?? true,
+    fps: value.fps ?? true,
   };
+  if (
+    !positions.includes(p.position) ||
+    !/^#[0-9a-f]{6}$/.test(p.borderColor) ||
+    typeof p.compact !== "boolean" ||
+    !Number.isInteger(p.margin) ||
+    p.margin < 0 ||
+    p.margin > 10 ||
+    typeof p.border !== "boolean" ||
+    typeof p.fps !== "boolean"
+  )
+    fail(
+      "Choose a panel position, margin 0–10%, a #rrggbb border colour, and border, frame rate and compact on or off.",
+    );
   if (
     typeof p.label !== "string" ||
     !p.label.trim() ||

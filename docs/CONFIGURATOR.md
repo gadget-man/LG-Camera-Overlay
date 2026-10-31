@@ -62,7 +62,7 @@ In **Your cameras**, give the camera a simple name and paste its full RTSP/RTSPS
 
 ## 4. The camera panel — choose its appearance
 
-In **The camera panel**, set the label, width and display time. The preview updates as you adjust them. It is an illustration, not your live camera. Width is 25–55%; time is 15–90 seconds.
+In **The camera panel**, set the label, width, display time, screen position (any corner or centre), distance from the screen edge (0–10% of screen width), whether to draw a border and its colour, whether to show the frame rate next to LIVE and optional compact mode (title and countdown drawn over the camera picture on a translucent background, so the panel is shorter). The preview updates as you adjust them. It is an illustration, not your live camera. Width is 25–55%; time is 15–90 seconds. The generated Home Assistant script carries these choices; you can change them later in the script's blueprint fields without running setup again.
 
 ![Live layout controls and sample television preview](images/setup-04-panel.png)
 

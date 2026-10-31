@@ -123,6 +123,54 @@ test("identifiers, URLs, labels and addresses reject unsafe inputs", (t) => {
   assert.equal(host("192.168.1.50"), "192.168.1.50");
   assert.throws(() => s.launch({ ...input, entity: "switch.office" }));
 });
+test("panel appearance options default safely and reach the launch and blueprint", (t) => {
+  const s = seed(t);
+  assert.deepEqual(panel({}), {
+    label: "Entrance",
+    width: 42,
+    duration: 30,
+    position: "top-right",
+    borderColor: "#67dfad",
+    compact: false,
+    margin: 3,
+    border: true,
+    fps: true,
+  });
+  const look = {
+    position: "bottom-left",
+    borderColor: "#FF8800",
+    compact: true,
+    margin: 0,
+    border: false,
+    fps: false,
+  };
+  assert.deepEqual(panel(look), {
+    ...panel({}),
+    ...look,
+    borderColor: "#ff8800",
+  });
+  for (const bad of [
+    { position: "top" },
+    { position: "javascript:x" },
+    { borderColor: "red" },
+    { borderColor: "#ff8800;background:url(x)" },
+    { compact: "yes" },
+    { margin: 11 },
+    { margin: 2.5 },
+    { margin: "3vw" },
+    { border: "no" },
+    { fps: "off" },
+  ])
+    assert.throws(() => panel(bad), /position|colour|compact/);
+  const body = { ...input, ...look };
+  assert.equal(s.launch(body).payload.params.position, "bottom-left");
+  assert.equal(s.launch(body).payload.params.compact, true);
+  assert.equal(s.launch(body).payload.params.border, false);
+  assert.equal(s.blueprint(body).use_blueprint.input.margin, 0);
+  assert.equal(s.blueprint(body).use_blueprint.input.borderColor, "#ff8800");
+  assert.equal(s.blueprint(body).use_blueprint.input.fps, false);
+  assert.equal(profile(body).panel.position, "bottom-left");
+});
 async function server(t, opts = {}) {
   const app = createServer({
     root: temp(t),

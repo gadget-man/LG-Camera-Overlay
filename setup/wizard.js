@@ -50,6 +50,12 @@ function values() {
     label: $("label").value,
     width: Number($("width").value),
     duration: Number($("duration").value),
+    position: $("position").value,
+    margin: Number($("margin").value),
+    borderColor: $("border-color").value,
+    fps: $("fps").checked,
+    border: $("border").checked,
+    compact: $("compact").checked,
     tv: $("route-tv").value,
     camera: $("route-camera").value,
     entity: $("ha-entity").value,
@@ -158,6 +164,27 @@ function update() {
   $("host-help").textContent = tips[selection()];
   $("panel-label").textContent = $("label").value || "Camera";
   $("camera-panel").style.width = $("width").value + "%";
+  // The TV margin is a share of screen width; on the 16:9 sample, vertical % is 16/9 larger.
+  const m = Number($("margin").value),
+    x = m + "%",
+    y = (m * 16) / 9 + "%",
+    place = {
+      "top-right": [y, x, "auto", "auto"],
+      "top-left": [y, "auto", "auto", x],
+      "bottom-right": ["auto", x, y, "auto"],
+      "bottom-left": ["auto", "auto", y, x],
+      center: ["50%", "auto", "auto", "50%"],
+    }[$("position").value],
+    preview = $("camera-panel").style;
+  [preview.top, preview.right, preview.bottom, preview.left] = place;
+  preview.transform =
+    $("position").value === "center" ? "translate(-50%, -50%)" : "none";
+  preview.borderColor = $("border-color").value;
+  preview.borderWidth = $("border").checked ? "1px" : "0";
+  $("border-color").disabled = !$("border").checked;
+  $("camera-panel").classList.toggle("compact", $("compact").checked);
+  $("panel-status").textContent = $("fps").checked ? "LIVE · 25 fps" : "LIVE";
+  $("margin-value").textContent = m + "%";
   $("width-value").textContent = $("width").value + "%";
   $("duration-value").textContent = $("duration").value + " seconds";
   $("panel-duration").textContent =
@@ -210,7 +237,7 @@ document
 $("next").onclick = () => navigate(step + 1);
 $("back").onclick = () => navigate(step - 1);
 for (const el of document.querySelectorAll(
-  "input[name=host],#label,#width,#duration,#ha-location",
+  "input[name=host],#label,#width,#duration,#position,#margin,#border,#border-color,#fps,#compact,#ha-location",
 ))
   el.addEventListener("input", update);
 $("profile").onchange = () => {
@@ -381,8 +408,12 @@ $("profile-file").onchange = async () => {
     document.querySelector(`input[name=host][value="${result.host}"]`).checked =
       true;
     $("ha-location").value = result.haLocation;
-    for (const key of ["label", "width", "duration"])
+    for (const key of ["label", "width", "duration", "position", "margin"])
       $(key).value = result.panel[key];
+    $("border-color").value = result.panel.borderColor;
+    $("border").checked = result.panel.border;
+    $("fps").checked = result.panel.fps;
+    $("compact").checked = result.panel.compact;
     update();
     message("Layout imported. No saved connections were changed.");
   } catch (e) {

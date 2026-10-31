@@ -16,7 +16,7 @@ Go to Settings → Automations & scenes → Blueprints → Import blueprint. Imp
 https://github.com/mbsintegrations/LG-Camera-Overlay/blob/main/blueprints/script/camera-overlay.yaml
 ```
 
-Create a script from it. Select the real LG media player, paste the private loopback URL from the installation guide, set the camera label, and start with 30 seconds and 42% width. Leave app ID as `com.mbs.cameraoverlay` unless deliberately using a separate test app. Save with a useful name such as “Lounge entrance camera.” The URL includes the relay token: treat script configuration, HA backups and traces as private.
+Create a script from it. Select the real LG media player, paste the private loopback URL from the installation guide, set the camera label, and start with 30 seconds and 42% width. Position (default top right), edge distance (default 3% of screen width), border (default on) and its colour (default `#67dfad`), frame rate next to LIVE (default on) and compact mode are optional; existing scripts keep the original look. Leave app ID as `com.mbs.cameraoverlay` unless deliberately using a separate test app. Save with a useful name such as “Lounge entrance camera.” The URL includes the relay token: treat script configuration, HA backups and traces as private.
 
 Run the script while the TV is already showing a native app or your chosen HDMI source. Target the LG media player even when watching Plex on an Apple TV connected through HDMI. Check the relay health and the physical TV. `first_frame` means the TV player acknowledged decoding a frame; it cannot prove that underlying audio stayed audible. After timeout, `clients` should return to zero and `encoder_running` to false. Test BACK separately.
 
