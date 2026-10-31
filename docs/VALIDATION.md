@@ -2,7 +2,19 @@
 
 ## Tested and operating setups
 
-Validation records cover 16 and 25 October 2026. Historical viewing reports and release-specific tests are distinguished below; results apply only to the stated models, builds and playback paths.
+Validation records cover 16, 25 and 31 October 2026. Historical viewing reports and release-specific tests are distinguished below; results apply only to the stated models, builds and playback paths.
+
+## 1.2.0 validation, 31 October 2026
+
+- Player/relay assertions and all **16 Node tests** passed on Windows and in a Linux x64 NAS container using the updated source. These include opt-in screen restoration, command order, a rejected screen-on request, and a standby transition before launch. The NAS run reused the existing test image; it was not a fresh Docker image build.
+- **19 HA Test checks passed** for blueprint imports, cooldown and priority handling, pause/resume, queue-time pause checks, unavailable-helper behaviour, preservation of manually disabled automations, backward compatibility and configuration validation. Tests used isolated counter actions, not household devices. Controller synchronization was invoked directly; an actual HA restart was not tested.
+- A separate 1.2.0 TV test app decoded video at approximately **23–27 fps**, at **768×432**, while the OLED65B9PLA's LG screensaver was active. First video arrived approximately **4.7 seconds** after launch. The viewer disconnected and encoding stopped after the 30-second timeout; the test app was removed and the production overlay app metadata remained unchanged.
+- **Physical result: no overlay was visible above the screensaver.** Decoder telemetry does not establish on-screen visibility.
+- A subsequent announced dismissal probe used the existing HA Test TV pairing: `turnOnScreen` changed reported power state from `Screen Saver` to `Active`, while the foreground app remained `youtube.leanback.v4`. The user confirmed that YouTube returned normally with no Launcher interruption or unexpected playback change. No HOME/BACK or playback command was sent.
+- In the combined dismissal-plus-overlay test, the user confirmed it worked. Launcher (`com.mbs.communityhome`) was already the foreground app before dismissal and remained selected afterward and after the overlay closed. The NAS relay decoded approximately **21–24 fps**, with first video **2.4 seconds** after launch; after the 30-second timeout it had no viewers and no encoder running. The separate test app was removed and production overlay metadata remained unchanged. This was a coordinated test using HA Test's pairing and launch integration, not yet a released automatic dismissal feature. Other TV models and combined playback/audio acceptance over YouTube remain unverified.
+- Launcher coexistence review: the pause controller writes only its selected dedicated helper and does not modify other automations. The existing Launcher camera-alert toggle is an independent gate. No HOME/BACK commands, Launcher app replacement or Home-key helper changes were made. The combined test preserved Launcher as described above; Home-key behaviour was not exercised in this run.
+- Configurator appearance/screensaver controls were inspected at 1440px desktop and 375px phone widths; all six installation screenshots were refreshed using sample mode.
+- Production and test IPK builds passed package/source verification. **HA OS/Supervisor installation and ingress remain untested**; the NAS Docker test does not establish HA OS compatibility.
 
 | Setup or behaviour | Evidence | Limits |
 |---|---|---|

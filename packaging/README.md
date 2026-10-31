@@ -1,6 +1,6 @@
 # Setup packaging
 
-Run `npm run build:setup` after placing the verified v1.0.0 TV IPK and its checksum manifest in `dist/`. This creates `.build/setup-release/LG-Camera-Overlay-Setup-1.1.0.zip`, a separately named experimental HA OS App ZIP, and SHA256SUMS.txt. It does not upload anything. `npm run build:review` keeps the local-review output names for development.
+Run `npm run build:setup` after placing the verified v1.2.0 TV IPK and its checksum manifest in `dist/`. This creates `.build/setup-release/LG-Camera-Overlay-Setup-1.2.0.zip`, a separately named experimental HA OS App ZIP, and SHA256SUMS.txt. It does not upload anything. `npm run build:review` keeps the local-review output names for development.
 
 The setup ZIP includes the existing verified TV app, readable source, locked dependencies and the illustrated guide. The runtime image is built locally; no registry image is published. Preserve exact FFmpeg/package sources and notices before distributing a container image.
 

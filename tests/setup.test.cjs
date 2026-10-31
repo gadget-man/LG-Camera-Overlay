@@ -5,7 +5,7 @@ const test = require("node:test"),
   os = require("node:os"),
   path = require("node:path"),
   http = require("node:http");
-const { Store, panel } = require("../setup/store.cjs"),
+const { Store, panel, dismissScreensaver } = require("../setup/store.cjs"),
   { profile, bundle } = require("../setup/deployment.cjs"),
   { createServer } = require("../setup/server.cjs"),
   { host } = require("../setup/devices.cjs"),
@@ -123,6 +123,102 @@ test("identifiers, URLs, labels and addresses reject unsafe inputs", (t) => {
   assert.equal(host("192.168.1.50"), "192.168.1.50");
   assert.throws(() => s.launch({ ...input, entity: "switch.office" }));
 });
+test("panel appearance options default safely and reach the launch and blueprint", (t) => {
+  const s = seed(t);
+  assert.deepEqual(panel({}), {
+    label: "Entrance",
+    width: 42,
+    duration: 30,
+    position: "top-right",
+    borderColor: "#67dfad",
+    compact: false,
+    margin: 3,
+    border: true,
+    fps: true,
+  });
+  const look = {
+    position: "bottom-left",
+    borderColor: "#FF8800",
+    compact: true,
+    margin: 0,
+    border: false,
+    fps: false,
+  };
+  assert.deepEqual(panel(look), {
+    ...panel({}),
+    ...look,
+    borderColor: "#ff8800",
+  });
+  for (const bad of [
+    { position: "top" },
+    { position: "javascript:x" },
+    { borderColor: "red" },
+    { borderColor: "#ff8800;background:url(x)" },
+    { compact: "yes" },
+    { margin: 11 },
+    { margin: 2.5 },
+    { margin: "3vw" },
+    { border: "no" },
+    { fps: "off" },
+  ])
+    assert.throws(() => panel(bad), /position|colour|compact/);
+  const body = { ...input, ...look };
+  assert.equal(s.launch(body).payload.params.position, "bottom-left");
+  assert.equal(s.launch(body).payload.params.compact, true);
+  assert.equal(s.launch(body).payload.params.border, false);
+  assert.equal(s.blueprint(body).use_blueprint.input.margin, 0);
+  assert.equal(s.blueprint(body).use_blueprint.input.borderColor, "#ff8800");
+  assert.equal(s.blueprint(body).use_blueprint.input.fps, false);
+  assert.equal(profile(body).panel.position, "bottom-left");
+});
+test("screen restore is opt-in and survives profile and blueprint export", (t) => {
+  const s = seed(t);
+  assert.equal(dismissScreensaver({}), false);
+  for (const value of ["true", 1, {}, []]) assert.throws(() => dismissScreensaver({dismissScreensaver:value}));
+  assert.equal(s.blueprint(input).use_blueprint.input.dismiss_screensaver, false);
+  const enabled = {...input, dismissScreensaver:true};
+  assert.equal(s.blueprint(enabled).use_blueprint.input.dismiss_screensaver, true);
+  assert.equal(profile(enabled).dismissScreensaver, true);
+  assert.equal(profile(input).dismissScreensaver, false);
+  assert.equal(s.launch(enabled).payload.params.dismissScreensaver, undefined);
+});
+
+test("screen restore orders commands and aborts on off TV, failed command or standby race", async (t) => {
+  let state = "on", failScreen = false, standbyAfterScreen = false;
+  const commands = [];
+  const fake = http.createServer(async (req,res) => {
+    res.setHeader("Content-Type","application/json");
+    if(req.method === "GET") return res.end(JSON.stringify({state}));
+    let raw="";for await(const chunk of req)raw+=chunk;
+    const body=JSON.parse(raw);commands.push(body);
+    if(body.command.endsWith("turnOnScreen")) {
+      if(failScreen)res.statusCode=500;
+      if(standbyAfterScreen)state="off";
+    }
+    res.end("[]");
+  });
+  await new Promise(r=>fake.listen(0,"127.0.0.1",r));
+  t.after(()=>new Promise(r=>{fake.closeAllConnections();fake.close(r);}));
+  const connection={base:"http://127.0.0.1:"+fake.address().port,token:"x".repeat(32)};
+  const payload=seed(t).launch(input);
+  await haLaunch(connection,payload);
+  assert.deepEqual(commands.map(c=>c.command),["system.launcher/launch"]);
+  commands.length=0;state="off";
+  await assert.rejects(()=>haLaunch(connection,payload,true),/off or unavailable/);
+  assert.equal(commands.length,0);
+  state="on";failScreen=true;
+  await assert.rejects(()=>haLaunch(connection,payload,true),/screen-on/);
+  assert.equal(commands.length,1);
+  commands.length=0;failScreen=false;standbyAfterScreen=true;
+  await assert.rejects(()=>haLaunch(connection,payload,true),/no longer active/);
+  assert.equal(commands.length,1);
+  commands.length=0;state="on";standbyAfterScreen=false;
+  await haLaunch(connection,payload,true);
+  assert.deepEqual(commands.map(c=>c.command),["com.webos.service.tvpower/power/turnOnScreen","system.launcher/launch"]);
+  assert.equal(commands[0].entity_id,input.entity);
+  assert.deepEqual(commands[1],payload);
+});
+
 async function server(t, opts = {}) {
   const app = createServer({
     root: temp(t),

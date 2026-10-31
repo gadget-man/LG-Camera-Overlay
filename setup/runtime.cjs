@@ -211,7 +211,8 @@ async function haConnect(body) {
       })),
   };
 }
-async function haLaunch(connection, payload) {
+async function haLaunch(connection, payload, dismissScreensaver = false) {
+  if (typeof dismissScreensaver !== "boolean") fail("Choose screensaver dismissal on or off.");
   if (!connection) fail("Connect Home Assistant before running a TV test.");
   const headers = {
     Authorization: "Bearer " + connection.token,
@@ -225,6 +226,21 @@ async function haLaunch(connection, payload) {
   const current = await state.json();
   if (!["on", "playing", "paused", "idle", "buffering"].includes(current.state))
     fail("The TV is off or unavailable. Turn it on yourself before testing.");
+  if (dismissScreensaver) {
+    const screen = await fetch(connection.base + "/api/services/webostv/command", {
+      method: "POST", headers,
+      body: JSON.stringify({ entity_id: payload.entity_id, command: "com.webos.service.tvpower/power/turnOnScreen" }),
+      redirect: "error", signal: AbortSignal.timeout(12000),
+    });
+    if (!screen.ok) fail("Home Assistant did not accept screen-on. The overlay was not launched.");
+    await screen.body.cancel();
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const check = await fetch(connection.base + "/api/states/" + encodeURIComponent(payload.entity_id), {
+      headers, redirect: "error", signal: AbortSignal.timeout(8000),
+    });
+    if (!check.ok || !["on", "playing", "paused", "idle", "buffering"].includes((await check.json()).state))
+      fail("The TV is no longer active. The overlay was not launched.");
+  }
   const r = await fetch(connection.base + "/api/services/webostv/command", {
     method: "POST",
     headers,
