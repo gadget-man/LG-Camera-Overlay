@@ -3,6 +3,6 @@ node_modules
 private
 logs
 dist/*
-!dist/com.mbs.cameraoverlay_1.0.0_all.ipk
+!dist/com.mbs.cameraoverlay_1.2.0_all.ipk
 !dist/SHA256SUMS.txt
 .build

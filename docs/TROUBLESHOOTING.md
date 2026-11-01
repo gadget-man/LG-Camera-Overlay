@@ -4,6 +4,8 @@ Work from the bottom up: validate configuration, SSH tunnel, camera encoding, TV
 
 | Symptom | Check / next action |
 |---|---|
+| Overlay is hidden by LG's screensaver | Enable the optional [screen restoration setting](HOME-ASSISTANT.md#optional-screensaver-dismissal) in the camera script and test while watching. Confirmed on OLED65B9PLA; other models are unverified. Do not permanently disable OLED screensaver protection. |
+| Automatic alerts stopped but manual camera button works | Check both the alert automation's enabled state and its selected pause helper. A missing/unavailable selected helper blocks alerts. The Launcher camera-alert button may control only the automation, not the new pause helper. |
 | `Invalid configuration` | Run `npm run check`; fix only the named field. IDs, pins and token formats are deliberately strict. |
 | FFmpeg unavailable | Set an executable available to the service user/container. A relative custom path is not resolved against the config directory; use an absolute path or PATH command. |
 | `tv_tunnels` false | Turn on the TV, verify Developer Mode and IP/9922 reachability, then run the official CLI system-info command. No wake-on-LAN is attempted. |
