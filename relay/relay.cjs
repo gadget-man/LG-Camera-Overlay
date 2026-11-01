@@ -53,13 +53,22 @@ function stopStream(group){
 }
 function detach(ws){
  if(!clients.delete(ws))return;
- const group=ws.group;ws.group=null;if(group){group.clients.delete(ws);if(!group.clients.size)stopStream(group);}
+ const group=ws.group;ws.group=null;if(group){group.clients.delete(ws);if(!group.clients.size&&!(group.warmUntil>Date.now()))stopStream(group);}
+}
+function prewarm(camera){
+ // Start the camera feed when Home Assistant asks, so it is already running when the TV app connects.
+ let group=streams.get(camera);
+ if(!group){group={camera,encoder:null,clients:new Set(),bytes:0,error:null};streams.set(camera,group);}
+ group.warmUntil=Date.now()+20000;
+ if(!group.encoder)encode(group,conf.hardwareDecode!=="videotoolbox");
+ clearTimeout(group.warmTimer);
+ group.warmTimer=setTimeout(()=>{if(!group.clients.size)stopStream(group);},20500);group.warmTimer.unref();
 }
 function encode(group,software){
- if(stopping||streams.get(group.camera)!==group||!group.clients.size)return;
+ if(stopping||streams.get(group.camera)!==group||(!group.clients.size&&!(group.warmUntil>Date.now())))return;
  const args=["-hide_banner","-loglevel","error"];
  if(!software&&conf.hardwareDecode==="videotoolbox")args.push("-hwaccel","videotoolbox");
- args.push("-rtsp_transport","tcp","-i",conf.sources[group.camera],"-an","-vf","scale=768:432","-r","25","-c:v","mpeg1video","-b:v","2200k","-maxrate","2600k","-bufsize","5200k","-bf","0","-g","12","-threads","2","-t","95","-f","mpegts","-muxdelay","0.001","pipe:1");
+ args.push("-fflags","nobuffer","-probesize","500000","-analyzeduration","500000","-rtsp_transport","tcp","-i",conf.sources[group.camera],"-an","-vf","scale=768:432","-r","25","-c:v","mpeg1video","-b:v","2200k","-maxrate","2600k","-bufsize","5200k","-bf","0","-g","12","-threads","2","-t","95","-f","mpegts","-muxdelay","0.001","pipe:1");
  const child=spawn(conf.ffmpeg,args,{cwd:root,stdio:["ignore","pipe","pipe"]});group.encoder=child;
  child.stdout.on("data",data=>{
   if(group.encoder!==child)return;
@@ -97,7 +106,7 @@ function showRequest(tvId,m){
  // Launch parameters for a Tizen TV, collected by its app on startup. Unknown fields are dropped.
  if(!m||typeof m!=="object"||!Object.prototype.hasOwnProperty.call(conf.sources,m.camera))return null;
  const tv=tvs.get(tvId).config,value={camera:m.camera,label:typeof m.label==="string"?m.label.slice(0,60):"Camera",sentAt:Date.now()};
- const duration=bounded(m.duration,15,90),width=bounded(m.width,25,55),hdmi=Number.isInteger(m.hdmi)&&m.hdmi>=0&&m.hdmi<=4?m.hdmi:tv.hdmi;
+ const duration=bounded(m.duration,15,90),width=bounded(m.width,10,55),hdmi=Number.isInteger(m.hdmi)&&m.hdmi>=0&&m.hdmi<=4?m.hdmi:tv.hdmi;
  if(duration)value.duration=duration;if(width)value.width=width;if(hdmi!==undefined)value.hdmi=hdmi;
  if(Number.isFinite(Number(m.detectedAt))&&Number(m.detectedAt)>0)value.detectedAt=Number(m.detectedAt);
  return value;
@@ -119,7 +128,7 @@ const server=http.createServer((req,res)=>{
    req.on("end",()=>{
     if(res.writableEnded)return;let value=null;try{value=showRequest(tvId,JSON.parse(body));}catch(e){}
     if(!value){res.writeHead(400);return res.end();}
-    pending.set(tvId,value);log("show_requested",{tv_id:tvId,camera:value.camera});res.writeHead(204);res.end();
+    pending.set(tvId,value);log("show_requested",{tv_id:tvId,camera:value.camera});prewarm(value.camera);res.writeHead(204);res.end();
    });
    return;
   }

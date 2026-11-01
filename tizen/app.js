@@ -1,19 +1,23 @@
-/* Samsung Tizen variant: HDMI picture shown full-screen behind a transparent page, camera panel on top. */
+/* Samsung Tizen variant: HDMI picture shown full-screen behind a transparent page, camera picture-in-picture on top.
+   The app stays open between alerts. Exiting would make the TV drop back to its own default source rather than
+   the HDMI input, and relaunching flashes the screen black, so the app keeps the HDMI picture behind it and
+   checks the relay for the next request instead. */
 (function () {
  "use strict";
  var panel=document.getElementById("panel"),canvas=document.getElementById("camera"),message=document.getElementById("message");
  var status=document.getElementById("status"),seconds=document.getElementById("seconds"),label=document.getElementById("label");
- var conf=window.OVERLAY_CONFIG||{},player=null,closeTimer=null,tickTimer=null,generation=0,lastFrame=0,frames=0,lastCount=0,started=0,request=null;
+ var conf=window.OVERLAY_CONFIG||{},player=null,closeTimer=null,tickTimer=null,pollTimer=null,generation=0,lastFrame=0,frames=0,lastCount=0,started=0,shownAt=0,request=null,active=false;
  function stop(){
-  generation++;
+  generation++;active=false;
   if(closeTimer!==null){clearTimeout(closeTimer);closeTimer=null;}
   if(tickTimer!==null){clearInterval(tickTimer);tickTimer=null;}
   if(request){try{request.abort();}catch(e){}request=null;}
   if(player){player.destroy();player=null;}
-  canvas.style.visibility="hidden";
+  canvas.style.visibility="hidden";panel.style.visibility="hidden";
  }
- function dismiss(){
-  stop();panel.style.display="none";
+ function quit(){
+  // Only used when BACK is pressed with no camera showing: the viewer chose to leave the app.
+  stop();if(pollTimer!==null){clearInterval(pollTimer);pollTimer=null;}
   try{tizen.application.getCurrentApplication().exit();}catch(e){try{window.close();}catch(x){}}
  }
  function bounded(value,low,high,fallback){value=Number(value);return isFinite(value)&&value>0?Math.max(low,Math.min(high,value)):fallback;}
@@ -27,7 +31,7 @@
  }
  function relay(){return typeof conf.relay==="string"?conf.relay.replace(/\/+$/,""):"";}
  function pending(done){
-  // Home Assistant posts the camera choice to the relay just before launching this app.
+  // Home Assistant posts the camera choice to the relay; the open app picks it up here.
   var base=relay(),xhr;
   if(!/^https?:\/\/[^\s/]+$/.test(base)||typeof conf.token!=="string"||typeof conf.tvId!=="string"){done(null);return;}
   xhr=new XMLHttpRequest();request=xhr;
@@ -53,6 +57,10 @@
    },function(){done(false);});
   }catch(e){done(false);}
  }
+ function background(){
+  // Show the configured HDMI input straight away so the page is never an empty black screen.
+  hdmi(Number(conf.hdmi===undefined?1:conf.hdmi)||0,function(){});
+ }
  function streamUrl(p){
   if(typeof p.stream==="string")return p.stream;
   var base=relay();if(!base||typeof p.camera!=="string")return "";
@@ -60,47 +68,58 @@
  }
  function play(p,mine){
   var url=streamUrl(p),duration=bounded(p.duration,15,90,45);
-  panel.style.display="block";panel.style.width=bounded(p.width,25,55,42)+"%";
+  active=true;
+  panel.style.display="block";panel.style.visibility="hidden";panel.style.width=bounded(p.width,10,55,25)+"%";
   label.textContent=typeof p.label==="string"?p.label.slice(0,60):"Camera";
   seconds.textContent=String(Math.ceil(duration));status.textContent="Connecting...";
   status.style.color="#a9bac4";message.textContent="Connecting live camera...";message.style.display="block";
-  started=Date.now();lastFrame=0;frames=0;lastCount=0;
-  closeTimer=setTimeout(dismiss,duration*1000);
+  started=Date.now();shownAt=0;lastFrame=0;frames=0;lastCount=0;
+  // The countdown starts when the picture first appears, not when the request arrives.
+  // If no picture arrives within 20 seconds, give up so the app is ready for the next alert.
+  closeTimer=setTimeout(stop,20000);
   if(!/^wss?:\/\/(?:[a-z0-9.-]+|\[[a-f0-9:]+\])(?::\d+)?\/[a-zA-Z0-9/_-]+$/.test(url)){
    status.textContent="No stream";message.textContent="Live stream was not supplied";return;
   }
   try{
    player=new JSMpeg.Player(url,{canvas:canvas,audio:false,autoplay:true,pauseWhenHidden:false,disableWebAssembly:true,videoBufferSize:1024*1024,
-    onVideoDecode:function(){if(mine!==generation)return;frames++;lastFrame=Date.now();canvas.style.visibility="visible";message.style.display="none";if(frames===1){var socket=player&&player.source&&player.source.socket;if(socket&&socket.readyState===1)socket.send(JSON.stringify({type:"started",appStartupMs:lastFrame-started,sentAt:Number(p.sentAt)||0,detectedAt:Number(p.detectedAt)||0}));}}});
+    onVideoDecode:function(){if(mine!==generation)return;frames++;lastFrame=Date.now();canvas.style.visibility="visible";panel.style.visibility="visible";message.style.display="none";if(frames===1){shownAt=lastFrame;clearTimeout(closeTimer);closeTimer=setTimeout(stop,duration*1000);var socket=player&&player.source&&player.source.socket;if(socket&&socket.readyState===1)socket.send(JSON.stringify({type:"started",appStartupMs:lastFrame-started,sentAt:Number(p.sentAt)||0,detectedAt:Number(p.detectedAt)||0}));}}});
   }catch(e){status.textContent="Player error";message.textContent="Live video could not start";return;}
   tickTimer=setInterval(function(){
    var now=Date.now(),fps=frames-lastCount;lastCount=frames;
-   seconds.textContent=String(Math.max(0,Math.ceil(duration-(now-started)/1000)));
+   if(shownAt)seconds.textContent=String(Math.max(0,Math.ceil(duration-(now-shownAt)/1000)));
    if(lastFrame&&now-lastFrame<3000){status.textContent="LIVE · "+fps+" fps";status.style.color="#67dfad";}
    else if(now-started>8000){status.textContent="Stream stalled";status.style.color="#ffd38a";canvas.style.visibility="hidden";message.textContent="Waiting for live camera";message.style.display="block";}
    var socket=player&&player.source&&player.source.socket;
    if(socket&&socket.readyState===1){socket.send(JSON.stringify({type:"metrics",frames:frames,fps:fps,width:canvas.width,height:canvas.height,age:lastFrame?now-lastFrame:-1}));}
   },1000);
  }
- function launch(){
+ function start(p){
   stop();
-  var mine=generation;
-  function begin(p){
+  var mine=generation,input=p.hdmi===undefined?(conf.hdmi===undefined?1:conf.hdmi):p.hdmi;
+  // Start the camera stream straight away; making sure the HDMI picture is behind it runs alongside.
+  play(p,mine);
+  hdmi(Number(input)||0,function(ok){
    if(mine!==generation)return;
-   if(!p){panel.style.display="block";status.textContent="No camera";message.textContent="No camera was requested";message.style.display="block";closeTimer=setTimeout(dismiss,8000);return;}
-   var input=p.hdmi===undefined?(conf.hdmi===undefined?1:conf.hdmi):p.hdmi;
-   hdmi(Number(input)||0,function(ok){
-    if(mine!==generation)return;
-    play(p,mine);
-    if(!ok){status.textContent="No HDMI picture";status.style.color="#ffd38a";}
-   });
-  }
-  var p=payload();if(p)begin(p);else pending(begin);
+   if(!ok){status.textContent="No HDMI picture";status.style.color="#ffd38a";}
+  });
  }
- window.addEventListener("appcontrol",launch);
- document.addEventListener("visibilitychange",function(){if(document.hidden)dismiss();});
- document.addEventListener("keydown",function(e){if(e.keyCode===10009||e.keyCode===27){e.preventDefault();dismiss();}});
+ function check(){
+  // Ask the relay whether Home Assistant has requested the camera. Skipped while a camera is showing.
+  if(active||request)return;
+  var mine=generation;
+  pending(function(p){if(p&&mine===generation&&!active)start(p);});
+ }
+ function launched(){
+  // First start, or Home Assistant relaunching the already-open app: never interrupt a camera that is showing.
+  var p=payload();if(p){start(p);return;}
+  check();
+ }
+ window.addEventListener("appcontrol",launched);
+ document.addEventListener("visibilitychange",function(){if(document.hidden)stop();else background();});
+ document.addEventListener("keydown",function(e){if(e.keyCode===10009||e.keyCode===27){e.preventDefault();if(active)stop();else quit();}});
  window.addEventListener("pagehide",stop);
  window.addEventListener("unload",stop);
- launch();
+ background();
+ launched();
+ pollTimer=setInterval(check,1000);
 }());

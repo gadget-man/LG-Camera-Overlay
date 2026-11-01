@@ -1,9 +1,10 @@
 blueprint:
-  name: Samsung Camera Overlay - launch one camera on one Tizen TV
+  name: Samsung Camera Overlay - show one camera on one Tizen TV
   description: >-
-    Tell the relay which camera to show, then launch the overlay app on an already-on Samsung TV.
-    The app shows the chosen HDMI input full-screen with the camera panel on top.
-    Requires the rest_command.camera_overlay_show snippet from docs/SAMSUNG-TIZEN.md.
+    Tell the relay which camera to show, then make sure the overlay app is open on an already-on Samsung TV.
+    The app keeps the chosen HDMI input full-screen and shows the camera as a picture-in-picture on top.
+    If the app is already open it picks the request up within a second, with no relaunch and no black flash.
+    Requires the rest_command snippets from docs/SAMSUNG-TIZEN.md.
   domain: script
   author: MBS Integrations
   source_url: https://github.com/gadget-man/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
@@ -12,6 +13,7 @@ blueprint:
   input:
     tv:
       name: Samsung TV
+      description: Nothing happens unless this TV is on.
       selector:
         entity:
           filter:
@@ -24,7 +26,7 @@ blueprint:
         text: {}
     camera:
       name: Relay camera ID
-      description: The camera's key under "sources" in the relay's private/config.json, for example entrance.
+      description: The camera's key under "sources" in the relay's private/config.json, for example outside.
       selector:
         text: {}
     label:
@@ -33,23 +35,25 @@ blueprint:
       selector:
         text: {}
     duration:
-      name: Total display duration
-      default: 30
+      name: Time on screen
+      description: Counted from when the picture first appears on the TV, not from when the script runs.
+      default: 20
       selector:
         number:
           min: 15
           max: 90
           unit_of_measurement: seconds
     width:
-      name: Panel width
-      default: 42
+      name: Picture width
+      description: Width of the picture-in-picture as a percentage of the screen.
+      default: 25
       selector:
         number:
-          min: 25
+          min: 10
           max: 55
           unit_of_measurement: '%'
     hdmi:
-      name: HDMI input behind the panel
+      name: HDMI input behind the picture
       description: 0 keeps whatever TV source the app finds.
       default: 1
       selector:
@@ -61,8 +65,36 @@ blueprint:
       default: MbsCamOvly.CameraOverlay
       selector:
         text: {}
-mode: restart
+    enabled_switch:
+      name: On/off switch (optional)
+      description: An input_boolean. When it is off, the script does nothing. Leave empty to always run.
+      default: ''
+      selector:
+        entity:
+          filter:
+            - domain: input_boolean
+    launch_with:
+      name: How to open the TV app
+      description: >-
+        "TV network API" posts to the TV on port 8001 through rest_command.camera_overlay_launch
+        (confirmed on a 2021 QN94A). "Samsung integration" uses media_player.play_media instead.
+      default: rest_command
+      selector:
+        select:
+          options:
+            - label: TV network API (rest_command.camera_overlay_launch)
+              value: rest_command
+            - label: Samsung integration (media_player.play_media)
+              value: samsungtv
+mode: single
+max_exceeded: silent
+variables:
+  enabled: !input enabled_switch
+  launch: !input launch_with
+  shown_for: !input duration
 sequence:
+  - condition: template
+    value_template: "{{ not enabled or is_state(enabled, 'on') }}"
   - condition: state
     entity_id: !input tv
     state: ['on', playing, paused, idle, buffering]
@@ -74,9 +106,19 @@ sequence:
       duration: !input duration
       width: !input width
       hdmi: !input hdmi
-  - action: media_player.play_media
-    target:
-      entity_id: !input tv
-    data:
-      media_content_type: app
-      media_content_id: !input app_id
+  - choose:
+      - conditions: "{{ launch == 'samsungtv' }}"
+        sequence:
+          - action: media_player.play_media
+            continue_on_error: true
+            target:
+              entity_id: !input tv
+            data:
+              media_content_type: app
+              media_content_id: !input app_id
+    default:
+      - action: rest_command.camera_overlay_launch
+        continue_on_error: true
+  # Ignore repeat triggers (motion, a second button press) while the picture starts up and shows.
+  - delay:
+      seconds: "{{ shown_for | int + 10 }}"

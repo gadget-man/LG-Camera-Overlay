@@ -17,4 +17,10 @@ if(!profile){console.log('Add --profile <certificate profile> to package with th
 fs.mkdirSync(dist,{recursive:true});
 const run=spawnSync(tizen,['package','-t','wgt','-s',profile,'-o',dist,'--',stage],{stdio:'inherit',shell:process.platform==='win32'});
 if(run.error)throw Error('Tizen CLI not found; install Tizen Studio or set TIZEN_CLI');
-process.exitCode=run.status||0;
+if(run.status){process.exitCode=run.status;return;}
+// tizen install fails without a reason when the package file name contains a space, and the CLI names
+// the file after <name> in config.xml ("Camera Overlay.wgt"), so rename it to a space-free name.
+for(const file of fs.readdirSync(dist))if(file.endsWith('.wgt')&&/\s/.test(file)){
+ const target=file.replace(/\s+/g,'');fs.rmSync(path.join(dist,target),{force:true});fs.renameSync(path.join(dist,file),path.join(dist,target));
+ console.log('Renamed package to '+path.join(dist,target));
+}

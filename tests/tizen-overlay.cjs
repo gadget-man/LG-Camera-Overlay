@@ -15,21 +15,29 @@ function rig(opts){
  vm.runInNewContext(fs.readFileSync('tizen/app.js','utf8'),context);
  return {handlers,timers,nodes,calls,xhrs,get options(){return options},get exited(){return exited},get destroyed(){return destroyed}};
 }
-// Relay-supplied request: fetch pending, switch to HDMI 1 behind the page, then stream.
-const a=rig({});assert.equal(a.xhrs.length,1);assert.equal(a.xhrs[0].url,'http://192.0.2.10:8766/pending/t0k/lounge');
-a.xhrs[0].status=200;a.xhrs[0].responseText=JSON.stringify({camera:'entrance',label:'Front door',duration:30,width:40});a.xhrs[0].onload();
-assert.deepEqual(a.calls,[['setSource','HDMI',1],['show','0px,0px,100%,100%','MAIN','BEHIND']]);
+const timeouts=r=>[...r.timers.values()].filter(t=>t.type==='timeout');
+// Startup: HDMI 1 goes behind the page at once (no black screen), then the relay is asked for a camera.
+const a=rig({});assert.deepEqual(a.calls,[['setSource','HDMI',1],['show','0px,0px,100%,100%','MAIN','BEHIND']]);
+assert.equal(a.xhrs.length,1);assert.equal(a.xhrs[0].url,'http://192.0.2.10:8766/pending/t0k/lounge');
+a.xhrs[0].status=200;a.xhrs[0].responseText=JSON.stringify({camera:'entrance',label:'Front door',duration:30,width:20});a.xhrs[0].onload();
+assert.equal(a.calls.filter(c=>c[0]==='setSource').length,1,'HDMI already selected is not switched again');
 assert.equal(a.options.url,'ws://192.0.2.10:8766/live/t0k/entrance/lounge');assert.equal(a.options.audio,false);
-assert.equal(a.nodes.panel.style.width,'40%');assert.equal(a.nodes.label.textContent,'Front door');
-assert.equal([...a.timers.values()].find(t=>t.type==='timeout').t,30000);
-a.handlers.keydown({keyCode:10009,preventDefault(){}});assert.equal(a.exited,1);assert.equal(a.destroyed,1);assert.equal(a.timers.size,0);
-// Relaunch while running replaces the session; an already-selected HDMI input is not switched again.
-a.handlers.appcontrol();a.xhrs[1].status=200;a.xhrs[1].responseText=JSON.stringify({camera:'garage',hdmi:1});a.xhrs[1].onload();
-assert.equal(a.calls.filter(c=>c[0]==='setSource').length,1);assert.equal(a.options.url,'ws://192.0.2.10:8766/live/t0k/garage/lounge');
-// A stale response from a replaced launch is ignored.
-a.handlers.appcontrol();const stale=a.xhrs[2];a.handlers.appcontrol();stale.status=200;stale.responseText='{"camera":"x"}';stale.onload();assert(stale.aborted);assert.equal(a.options.url,'ws://192.0.2.10:8766/live/t0k/garage/lounge');
-// DEEP_LINK payload skips the relay request; nothing requested closes after 8 s.
-const b=rig({payload:{camera:'entrance',hdmi:2}});assert.equal(b.xhrs.length,0);assert.deepEqual(b.calls[0],['setSource','HDMI',2]);
-const c=rig({});c.xhrs[0].status=204;c.xhrs[0].onload();assert.equal(c.nodes.message.textContent,'No camera was requested');[...c.timers.values()][0].f();assert.equal(c.exited,1);
-// Leaving the app (Home, source change) stops video and exits.
-console.log('PASS: Tizen pending fetch, HDMI behind page, stream URL, BACK exit, relaunch replacement, stale response, DEEP_LINK payload, empty launch');
+assert.equal(a.nodes.panel.style.width,'20%');assert.equal(a.nodes.panel.style.visibility,'hidden','Picture stays hidden until the first frame');
+assert.equal(a.nodes.seconds.textContent,'30');assert.equal(timeouts(a).length,1);assert.equal(timeouts(a)[0].t,20000,'Gives up if no picture arrives');
+a.options.onVideoDecode();assert.equal(a.nodes.panel.style.visibility,'visible');
+assert.equal(timeouts(a).length,1);assert.equal(timeouts(a)[0].t,30000,'Countdown starts at the first frame');
+// While a camera shows, polling and an HA relaunch do not interrupt it.
+const before=a.xhrs.length;for(const t of [...a.timers.values()])if(t.type==='interval')t.f();a.handlers.appcontrol();assert.equal(a.xhrs.length,before);assert.equal(a.destroyed,0);
+// Time up: the camera stops but the app stays open on HDMI, so the TV keeps showing the HDMI input.
+timeouts(a)[0].f();assert.equal(a.exited,0,'App must not exit when the timer ends');assert.equal(a.destroyed,1);assert.equal(a.nodes.panel.style.visibility,'hidden');
+// The next request is picked up by polling without relaunching the app.
+for(const t of [...a.timers.values()])if(t.type==='interval')t.f();const next=a.xhrs[a.xhrs.length-1];assert.equal(next.url,'http://192.0.2.10:8766/pending/t0k/lounge');
+next.status=200;next.responseText=JSON.stringify({camera:'garage'});next.onload();assert.equal(a.options.url,'ws://192.0.2.10:8766/live/t0k/garage/lounge');
+// BACK with a camera showing only hides it; BACK with nothing showing leaves the app.
+a.handlers.keydown({keyCode:10009,preventDefault(){}});assert.equal(a.exited,0);assert.equal(a.destroyed,2);
+a.handlers.keydown({keyCode:10009,preventDefault(){}});assert.equal(a.exited,1);
+// Nothing pending: the app waits on HDMI rather than exiting.
+const c=rig({});c.xhrs[0].status=204;c.xhrs[0].onload();assert.equal(c.exited,0);assert.equal(timeouts(c).length,0);
+// DEEP_LINK payload skips the relay request.
+const b=rig({payload:{camera:'entrance',hdmi:2}});assert.equal(b.xhrs.length,0);assert(b.calls.some(x=>x[0]==='setSource'&&x[2]===2));
+console.log('PASS: Tizen HDMI behind page at startup, pending poll, PIP hidden until first frame, countdown from first frame, no-picture timeout, no exit at timer end, HA relaunch does not interrupt, BACK hides then exits, DEEP_LINK payload');
