@@ -25,7 +25,7 @@ Developer Mode expires. If it is disabled after expiry, development-installed ap
 
 ## 3. Install the TV app
 
-The graphical route is [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases), a community application available for Windows, macOS and Linux (v1.99.20 was current when this guide was prepared). Add your TV using its IP, Developer Mode connection and displayed passphrase. Install `com.mbs.cameraoverlay_1.0.0_all.ipk` from this project's release. Check its SHA-256 against `SHA256SUMS.txt` first.
+The graphical route is [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases), a community application available for Windows, macOS and Linux (v1.99.20 was current when this guide was prepared). Add your TV using its IP, Developer Mode connection and displayed passphrase. Install `com.mbs.cameraoverlay_1.2.0_all.ipk` from this project's release. Check its SHA-256 against `SHA256SUMS.txt` first.
 
 Expected result: Camera Overlay appears in the installed apps list. Launching it without parameters displays **No stream** and closes automatically; that is expected at this stage.
 
@@ -37,7 +37,7 @@ ares-setup-device
 ares-novacom --device lounge-tv --getkey
 # Enter the displayed TV passphrase at the prompt, not in a shell command.
 ares-device --system-info --device lounge-tv
-ares-install --device lounge-tv com.mbs.cameraoverlay_1.0.0_all.ipk
+ares-install --device lounge-tv com.mbs.cameraoverlay_1.2.0_all.ipk
 ```
 
 Installing an IPK does **not** configure the relay's SSH tunnel. Complete the next section even if Dev Manager successfully installed the app.
@@ -47,7 +47,7 @@ Installing an IPK does **not** configure the relay's SSH tunnel. Complete the ne
 Download the matching source archive from the release or clone the tag:
 
 ```sh
-git clone --branch v1.0.0 https://github.com/mbsintegrations/LG-Camera-Overlay.git
+git clone --branch v1.2.0 https://github.com/mbsintegrations/LG-Camera-Overlay.git
 cd LG-Camera-Overlay
 npm ci --omit=dev --ignore-scripts
 mkdir private logs

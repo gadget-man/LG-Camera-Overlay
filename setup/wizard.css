@@ -249,6 +249,16 @@ h2 {
   padding: 0;
   accent-color: var(--teal);
 }
+.field input[type="color"] {
+  width: 64px;
+  height: 40px;
+  padding: 4px;
+  cursor: pointer;
+}
+.field input[type="color"]:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 .field output {
   color: var(--teal);
   font-size: 16px;
@@ -411,6 +421,21 @@ h2 {
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 3px 15px #0008;
+}
+.overlay.compact .overlay-top,
+.overlay.compact .overlay-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  background: rgba(7, 55, 71, 0.55);
+  text-shadow: 0 1px 2px #000;
+}
+.overlay.compact .overlay-top {
+  top: 0;
+}
+.overlay.compact .overlay-bottom {
+  bottom: 0;
 }
 .overlay-top,
 .overlay-bottom {

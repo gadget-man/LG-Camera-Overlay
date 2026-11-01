@@ -50,6 +50,13 @@ function values() {
     label: $("label").value,
     width: Number($("width").value),
     duration: Number($("duration").value),
+    position: $("position").value,
+    margin: Number($("margin").value),
+    borderColor: $("border-color").value,
+    fps: $("fps").checked,
+    border: $("border").checked,
+    compact: $("compact").checked,
+    dismissScreensaver: $("dismiss-screensaver").checked,
     tv: $("route-tv").value,
     camera: $("route-camera").value,
     entity: $("ha-entity").value,
@@ -158,6 +165,28 @@ function update() {
   $("host-help").textContent = tips[selection()];
   $("panel-label").textContent = $("label").value || "Camera";
   $("camera-panel").style.width = $("width").value + "%";
+  // The TV margin is a share of screen width; on the 16:9 sample, vertical % is 16/9 larger.
+  const m = Number($("margin").value),
+    x = m + "%",
+    y = (m * 16) / 9 + "%",
+    place = {
+      "top-right": [y, x, "auto", "auto"],
+      "top-left": [y, "auto", "auto", x],
+      "bottom-right": ["auto", x, y, "auto"],
+      "bottom-left": ["auto", "auto", y, x],
+      center: ["50%", "auto", "auto", "50%"],
+    }[$("position").value],
+    preview = $("camera-panel").style;
+  [preview.top, preview.right, preview.bottom, preview.left] = place;
+  preview.transform =
+    $("position").value === "center" ? "translate(-50%, -50%)" : "none";
+  preview.borderColor = $("border-color").value;
+  preview.borderWidth = $("border").checked ? "1px" : "0";
+  $("border-color").disabled = !$("border").checked;
+  $("camera-panel").classList.toggle("compact", $("compact").checked);
+  $("panel-status").textContent = $("fps").checked ? "LIVE · 25 fps" : "LIVE";
+  $("margin-value").textContent = m + "%";
+  $("margin").disabled = $("position").value === "center";
   $("width-value").textContent = $("width").value + "%";
   $("duration-value").textContent = $("duration").value + " seconds";
   $("panel-duration").textContent =
@@ -166,7 +195,7 @@ function update() {
   $("deploy-help").textContent =
     selection() === "haos"
       ? "EXPERIMENTAL — NOT TESTED on HA OS. Install the experimental package only in a disposable HA OS system. No one-click App repository is supplied."
-      : "Build or load the lg-camera-overlay:1.1.0 image on your relay host first, then extract the private bundle into a new folder. Follow the illustrated configurator guide for startup and folder permissions.";
+      : "Build or load the lg-camera-overlay:1.2.0 image on your relay host first, then extract the private bundle into a new folder. Follow the illustrated configurator guide for startup and folder permissions.";
 }
 function navigate(n) {
   step = Math.max(0, Math.min(5, n));
@@ -210,7 +239,7 @@ document
 $("next").onclick = () => navigate(step + 1);
 $("back").onclick = () => navigate(step - 1);
 for (const el of document.querySelectorAll(
-  "input[name=host],#label,#width,#duration,#ha-location",
+  "input[name=host],#label,#width,#duration,#position,#margin,#border,#border-color,#fps,#compact,#ha-location,#dismiss-screensaver",
 ))
   el.addEventListener("input", update);
 $("profile").onchange = () => {
@@ -327,7 +356,7 @@ action("save-settings", async () => {
 });
 action("test-tv", async () => {
   const v = { ...values(), duration: 30 };
-  if (!confirm("Show " + v.camera + " on " + v.entity + " for 30 seconds now?"))
+  if (!confirm("Show " + v.camera + " on " + v.entity + " for 30 seconds now?" + (v.dismissScreensaver ? " This will restore the TV screen first." : "")))
     return;
   await api("ha/test", { ...v, confirm: true });
   $("test-result").textContent =
@@ -377,12 +406,18 @@ $("profile-file").onchange = async () => {
       host: p.host,
       haLocation: p.haLocation,
       ...p.panel,
+      dismissScreensaver: p.dismissScreensaver ?? false,
     });
     document.querySelector(`input[name=host][value="${result.host}"]`).checked =
       true;
     $("ha-location").value = result.haLocation;
-    for (const key of ["label", "width", "duration"])
+    for (const key of ["label", "width", "duration", "position", "margin"])
       $(key).value = result.panel[key];
+    $("border-color").value = result.panel.borderColor;
+    $("border").checked = result.panel.border;
+    $("fps").checked = result.panel.fps;
+    $("compact").checked = result.panel.compact;
+    $("dismiss-screensaver").checked = result.dismissScreensaver ?? false;
     update();
     message("Layout imported. No saved connections were changed.");
   } catch (e) {
