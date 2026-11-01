@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![MBS Integrations](https://img.shields.io/badge/MBS_Integrations-mbsintegrations.ie-73dbe2)](https://mbsintegrations.ie)
 
-Show a live camera as a small picture-in-picture over what you're watching on a **Samsung Tizen TV**, such as Sky or another box on HDMI. Home Assistant decides when it appears. It closes after your chosen time or when you press BACK, and the HDMI programme carries on underneath, sound included.
+Show a live camera as a small picture-in-picture over what you're watching on a **Samsung Tizen TV**, such as Sky or another media box on HDMI. Home Assistant decides when it appears. It closes after your chosen time or when you press BACK, and the HDMI programme carries on underneath, sound included.
 
 > **This is the Samsung Tizen branch** of [LG Camera Overlay](https://github.com/mbsintegrations/LG-Camera-Overlay) by MBS Integrations. The LG webOS version, with its setup wizard, release downloads and test record, lives on that project's `main` branch. This branch shares its relay, Home Assistant blueprints and 1.2.0 features, and adds a Samsung TV app.
 
@@ -17,11 +17,11 @@ Show a live camera as a small picture-in-picture over what you're watching on a 
 
 ## What you need
 
-- **A Samsung Tizen TV** with your box on an HDMI input. Apps built into the TV (Netflix on the Samsung itself) can't be overlaid. See [compatibility](#compatibility).
+- **A Samsung Tizen TV - Older Orsay models will not work** with your box on an HDMI input. Apps built into the TV (Netflix on the Samsung itself) can't be overlaid. See [compatibility](#compatibility).
 - **Home Assistant**, with its built-in **Samsung Smart TV** integration. No HACS integration is needed.
 - **A camera or recorder with an RTSP/RTSPS stream**, and its username and password. For automatic alerts, a detection or doorbell signal must also reach Home Assistant. See [how detections work](docs/DETECTION-FLOW.md).
 - **An always-on computer for the relay,** which converts the camera stream for the TV. A Raspberry Pi works, and it can be the one running Home Assistant. See [hosting](docs/HOSTING.md).
-- **A Mac or PC with Tizen Studio** and a **Samsung account**, to build and install the TV app once. You need them again to rebuild it or renew the certificate.
+- **A Mac or PC with Tizen Studio** and a **Samsung account**, to build and install the TV app. You need them to build the app or renew the certificate.
 
 **[Start here: Samsung installation guide](docs/SAMSUNG-TIZEN.md)** · [Choose your setup](docs/START-HERE.md) · [Installation reference](docs/INSTALL.md) · [Home Assistant setup](docs/HOME-ASSISTANT.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) · [Test results](docs/VALIDATION.md)
 
@@ -43,7 +43,7 @@ Samsung doesn't let apps draw over other apps. Instead, the overlay app runs ful
 - **Video never goes through Home Assistant.** The relay pulls the camera stream and converts it for the TV. Home Assistant only sends "show this camera" and, if needed, opens the app.
 - **The relay starts the camera feed as soon as Home Assistant asks**, and stops it when no TV is watching.
 
-## Compatibility
+## Tested Compatibility
 
 | Samsung TV | Year | Result |
 |---|---|---|
