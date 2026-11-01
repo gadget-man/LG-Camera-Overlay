@@ -14,6 +14,12 @@
   - `npm run build:tizen` writes `dist/CameraOverlay.wgt`: `tizen install` fails without a reason when the file name contains a space.
   - Blueprint: optional on/off switch, opening the app through the TV's port 8001 API (default) or the Samsung integration, repeat-trigger cooldown, new size and duration defaults. Existing input keys are unchanged.
   - Rewritten Samsung guide: build computer without admin rights, relay on a Raspberry Pi with systemd, Samsung certificate setup, Home Assistant in Docker, troubleshooting and compatibility.
+- Brought in line with 1.2.0:
+  - Panel appearance on Samsung: `position`, `margin`, `border`, `borderColor` and `compact` from the LG launch blueprint, passed through `/show` (validated by the relay; invalid values fall back to defaults) and added to the Samsung blueprint and `rest_command` payload. `fps` does not apply. Defaults keep the tested look; the default edge distance is now 3% of the screen width.
+  - The Samsung guide covers the shared **Pause camera overlays** helper and the quiet-hours blueprint, and how they differ from the Samsung script's own on/off switch.
+  - `npm run build:tizen` reports failure when the Tizen CLI is stopped by a signal, as `build.cjs` does.
+  - Samsung app version 1.2.0.
+
 ## 1.2.0 — 31 October 2026
 
 - Add an optional shared pause helper to alert coordinators, plus a schedule/sensor-driven pause and resume blueprint. Normal and priority alerts check pause both at arrival and before execution; manual camera buttons remain available.

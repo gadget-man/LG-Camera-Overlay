@@ -109,6 +109,13 @@ function showRequest(tvId,m){
  const duration=bounded(m.duration,15,90),width=bounded(m.width,10,55),hdmi=Number.isInteger(m.hdmi)&&m.hdmi>=0&&m.hdmi<=4?m.hdmi:tv.hdmi;
  if(duration)value.duration=duration;if(width)value.width=width;if(hdmi!==undefined)value.hdmi=hdmi;
  if(Number.isFinite(Number(m.detectedAt))&&Number(m.detectedAt)>0)value.detectedAt=Number(m.detectedAt);
+ // Panel appearance, same names and ranges as the LG launch blueprint. Invalid values are dropped so the app uses its default.
+ const flag=v=>v===true||v==="true"?true:v===false||v==="false"?false:undefined;
+ if(["top-right","top-left","bottom-right","bottom-left","center"].includes(m.position))value.position=m.position;
+ const margin=Number(m.margin);if(m.margin!==null&&m.margin!==""&&Number.isInteger(margin)&&margin>=0&&margin<=10)value.margin=margin;
+ if(flag(m.border)!==undefined)value.border=flag(m.border);
+ if(typeof m.borderColor==="string"&&/^#[0-9a-fA-F]{6}$/.test(m.borderColor))value.borderColor=m.borderColor;
+ if(flag(m.compact)!==undefined)value.compact=flag(m.compact);
  return value;
 }
 const server=http.createServer((req,res)=>{

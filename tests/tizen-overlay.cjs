@@ -36,8 +36,17 @@ next.status=200;next.responseText=JSON.stringify({camera:'garage'});next.onload(
 // BACK with a camera showing only hides it; BACK with nothing showing leaves the app.
 a.handlers.keydown({keyCode:10009,preventDefault(){}});assert.equal(a.exited,0);assert.equal(a.destroyed,2);
 a.handlers.keydown({keyCode:10009,preventDefault(){}});assert.equal(a.exited,1);
+// Appearance: defaults keep the original look; LG-style position, margin, border, colour and compact are applied; bad values fall back.
+const st=r=>r.nodes.panel.style;
+assert.equal(st(a).top,'3vw');assert.equal(st(a).right,'3vw');assert.equal(st(a).bottom,'auto');assert.equal(st(a).borderWidth,'2px');assert.equal(st(a).borderColor,'rgba(255,255,255,.6)');assert.equal(a.nodes.panel.className,'');
+const s1=rig({});s1.xhrs[0].status=200;s1.xhrs[0].responseText=JSON.stringify({camera:'entrance',position:'bottom-left',margin:5,border:false,borderColor:'#ff0000',compact:true});s1.xhrs[0].onload();
+assert.equal(st(s1).bottom,'5vw');assert.equal(st(s1).left,'5vw');assert.equal(st(s1).top,'auto');assert.equal(st(s1).borderWidth,'0');assert.equal(st(s1).borderColor,'#ff0000');assert.equal(s1.nodes.panel.className,'compact');
+const s2=rig({});s2.xhrs[0].status=200;s2.xhrs[0].responseText=JSON.stringify({camera:'entrance',position:'center',margin:2.5,borderColor:'red',compact:'false'});s2.xhrs[0].onload();
+assert.equal(st(s2).transform,'translate(-50%,-50%)');assert.equal(st(s2).top,'50%');assert.equal(st(s2).borderColor,'rgba(255,255,255,.6)');assert.equal(s2.nodes.panel.className,'');
+const s3=rig({});s3.xhrs[0].status=200;s3.xhrs[0].responseText=JSON.stringify({camera:'entrance',position:'nowhere',margin:'',border:'false'});s3.xhrs[0].onload();
+assert.equal(st(s3).top,'3vw');assert.equal(st(s3).right,'3vw');assert.equal(st(s3).borderWidth,'0');
 // Nothing pending: the app waits on HDMI rather than exiting.
 const c=rig({});c.xhrs[0].status=204;c.xhrs[0].onload();assert.equal(c.exited,0);assert.equal(timeouts(c).length,0);
 // DEEP_LINK payload skips the relay request.
 const b=rig({payload:{camera:'entrance',hdmi:2}});assert.equal(b.xhrs.length,0);assert(b.calls.some(x=>x[0]==='setSource'&&x[2]===2));
-console.log('PASS: Tizen HDMI behind page at startup, pending poll, PIP hidden until first frame, countdown from first frame, no-picture timeout, no exit at timer end, HA relaunch does not interrupt, BACK hides then exits, DEEP_LINK payload');
+console.log('PASS: Tizen HDMI behind page at startup, pending poll, PIP hidden until first frame, countdown from first frame, no-picture timeout, position/margin/border/colour/compact styling and fallbacks, no exit at timer end, HA relaunch does not interrupt, BACK hides then exits, DEEP_LINK payload');

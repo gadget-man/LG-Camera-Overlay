@@ -32,6 +32,7 @@ Home Assistant ── POST TV:8001 "open app" (only does something if the app is
 - **The app stays open between alerts.** When the time runs out, the picture disappears and the HDMI input carries on full-screen. Quitting would make the TV fall back to its own default source (the tuner) instead of the HDMI input, and relaunching causes a black flash. The open app checks the relay once a second for the next request.
 - **The relay starts FFmpeg as soon as a request arrives**, so the stream is ready when the app connects. It stops FFmpeg when no TV is watching (at the latest 20 seconds after the request, and never later than 95 seconds).
 - **The countdown starts when the picture first appears**, so the full time is always on screen whatever the startup delay.
+- **Appearance is set per request from Home Assistant**, with the same setting names as the LG launch blueprint: position (four corners or centre), distance from the edge, border and border colour, and compact (the camera label on a strip over the picture). Changing them needs no rebuild.
 
 | Watching | Works? |
 |---|---|
@@ -42,6 +43,9 @@ Differences from the LG version:
 
 - **No SSH tunnel.** The TV app connects straight to the relay over your LAN, so the relay listens on a LAN address. The 64-character token is the only protection: keep it private and keep the relay off the Internet.
 - **No Developer Mode renewal.** `devmode.cjs` is LG-only and is skipped for Tizen TVs.
+- **Picture style.** The Samsung picture is a borderless-looking picture-in-picture with only the seconds remaining in its corner. There is no LIVE or frame-rate text, so the LG `fps` setting does not apply. Compact mode adds the camera label over the top of the picture.
+- **No screensaver dismissal.** The 1.2.0 LG screensaver option sends a webOS-only command and has no Samsung equivalent.
+- **The relay's faster stream start applies to all TVs.** The relay opens camera streams with `-fflags nobuffer` and a 0.5-second probe. This shortens startup on LG TVs too, but it has only been checked on the Samsung setup so far. If an LG camera that used to work now fails to start, check `/health` for an encoder error and report it.
 
 ## What you need
 
@@ -307,10 +311,12 @@ curl -m 10 -s -w "HTTP %{http_code}\n" -X POST "http://192.0.2.10:8766/show/$TOK
 
 Expect `HTTP 204`. Then check:
 
-1. **Picture:** the picture-in-picture appears in the top-right corner over the HDMI picture, with the seconds remaining in its corner. If the HDMI picture is replaced by black, TVWindow could not show the input on this model.
+1. **Picture:** the picture-in-picture appears in the top-right corner (the default position) over the HDMI picture, with the seconds remaining in its corner. If the HDMI picture is replaced by black, TVWindow could not show the input on this model.
 2. **Sound:** audio from the HDMI box continues.
 3. **End:** after the countdown the picture disappears and the HDMI input keeps playing.
 4. **Relay:** `curl -s http://192.0.2.10:8766/health` lists the TV under `tv_clients` while the picture is up, and `clients: 0` shortly afterwards.
+
+To try the appearance settings, add them to the same request, for example `\"position\":\"bottom-left\",\"margin\":5,\"compact\":true,\"borderColor\":\"#67dfad\"` before `\"detectedAt\"`.
 
 `tizen run -p MbsCamOvly.CameraOverlay -t DEVICE_NAME` also opens the app, but only while `sdb` is connected.
 
@@ -346,13 +352,18 @@ rest_command:
     payload: >-
       {"camera": {{ camera | to_json }}, "label": {{ label | to_json }},
        "duration": {{ duration | int }}, "width": {{ width | int }}, "hdmi": {{ hdmi | int }},
+       "position": {{ position | default('top-right') | to_json }}, "margin": {{ margin | default(3) | int }},
+       "border": {{ border | default(true) | to_json }}, "borderColor": {{ borderColor | default('') | to_json }},
+       "compact": {{ compact | default(false) | to_json }},
        "detectedAt": {{ (as_timestamp(now()) * 1000) | int }}}
   camera_overlay_launch:
     url: "http://192.0.2.40:8001/api/v2/applications/MbsCamOvly.CameraOverlay"
     method: POST
 ```
 
-The first tells the relay what to show. The second opens the TV app. If the app is already open, it does nothing visible.
+The first tells the relay what to show and how. The second opens the TV app. If the app is already open, it does nothing visible.
+
+The appearance lines use defaults, so scripts that don't set them still work. An installation set up before 1.2.0 with the shorter payload (without the `position` to `compact` lines) also keeps working, with the default look.
 
 **9d. Check and restart.** In Home Assistant, go to **Developer tools → YAML → Check configuration**, then restart (`sudo docker restart homeassistant`). On a Pi Zero 2 W, startup takes several minutes. Afterwards, **Developer tools → Actions** should list both `rest_command.camera_overlay_show` and `rest_command.camera_overlay_launch`. If they are missing, check for a duplicate top-level key with `sudo grep -n -E "^[a-z_]+:" CONFIG_FOLDER/configuration.yaml`.
 
@@ -391,14 +402,29 @@ sequence:
       duration: 20
       width: 25
       hdmi: 1
+      position: top-right
+      margin: 3
+      border: true
+      borderColor: ""
+      compact: false
   - action: rest_command.camera_overlay_launch
     continue_on_error: true
   - delay: "00:00:30"
 ```
 
-- `duration` is the time on screen in seconds (15 to 90), counted from when the picture appears.
-- `width` is the picture size as a percentage of the screen width (10 to 55). Neither needs a rebuild.
-- The final delay ignores repeat triggers while the picture starts up and shows.
+None of these settings needs a rebuild:
+
+| Setting | Meaning | Values (default) |
+|---|---|---|
+| `duration` | Time on screen, counted from when the picture appears | 15 to 90 seconds (45) |
+| `width` | Picture width | 10 to 55% of the screen (25) |
+| `position` | Where the picture sits | `top-right`, `top-left`, `bottom-right`, `bottom-left`, `center` (`top-right`) |
+| `margin` | Distance from the screen edges; ignored for `center` | 0 to 10% of the screen width (3) |
+| `border` | Draw a border | `true` or `false` (`true`) |
+| `borderColor` | Border colour | `#rrggbb`, or `""` for translucent white (`""`) |
+| `compact` | Show the camera label on a strip over the top of the picture | `true` or `false` (`false`) |
+
+An invalid value is ignored and the default used. The final delay ignores repeat triggers while the picture starts up and shows.
 
 **9h. Trigger it.** An automation for the test button:
 
@@ -414,7 +440,16 @@ actions:
       entity_id: script.show_tv_camera_overlay
 ```
 
-For motion or a doorbell, copy it and change the trigger, for example `entity_id: binary_sensor.YOUR_MOTION_SENSOR` with `to: "on"`. The switch and the TV-on check apply to every trigger, because they are inside the script. The existing LG alert blueprint can also call this script.
+For motion or a doorbell, copy it and change the trigger, for example `entity_id: binary_sensor.YOUR_MOTION_SENSOR` with `to: "on"`. The switch and the TV-on check apply to every trigger, because they are inside the script.
+
+**Alert automation and pause (1.2.0).** For several cameras, a doorbell that should take priority, or a cooldown, use the project's alert blueprint ([`camera-alert.yaml`](../blueprints/automation/camera-alert.yaml)) and point its launch actions at this script. See [Home Assistant setup](HOME-ASSISTANT.md). Its optional **Pause camera overlays** helper and the quiet-hours [pause blueprint](../blueprints/automation/pause-overlays.yaml) work with Samsung TVs too, because they act before the script runs. One pause helper can then cover LG and Samsung TVs together. The two switches work in opposite directions and block different things:
+
+| Switch | On means | Blocks |
+|---|---|---|
+| `TV Camera Overlay` in this script (or the blueprint's **On/off switch**) | Overlay allowed | Everything that runs this script, including the test button |
+| **Pause camera overlays** in the alert automation | Alerts paused | Automatic alerts only; buttons still work |
+
+Use either or both.
 
 **9i. Add the switch and button to a dashboard** (an **Entities** card), then test:
 
@@ -449,7 +484,7 @@ For motion or a doorbell, copy it and change the trigger, for example `entity_id
 
 | Model | Year | Result | Notes |
 |---|---|---|---|
-| QE55QN94AATXXU (`21_NIKEM2_QTV`) | 2021 | Works (user-confirmed) | HDMI 1 behind the picture; opened through port 8001; relay on a Pi Zero 2 W |
+| QE55QN94AATXXU (`21_NIKEM2_QTV`) | 2021 | Works (user-confirmed) | HDMI 1 behind the picture; opened through port 8001; relay on a Pi Zero 2 W. Tested with the default top-right picture; the 1.2.0 appearance settings have been checked in a desktop browser only |
 
 Please add your TV's model, year and results (the four checks in step 8) to an issue or pull request.
 
@@ -460,4 +495,11 @@ After changing the app or relay code:
 1. Rebuild and reinstall the app (step 7). Installing closes the app, so the next alert opens it once with the loading screen.
 2. Copy the relay to the Pi again (step 5e), then run `ssh -t PI_USER@PI_HOST 'sudo systemctl restart camera-overlay'`.
 
-Changing only `duration`, `width` or `hdmi` in Home Assistant needs neither.
+Changing only the script's settings (`duration`, `width`, `hdmi`, `position`, `margin`, `border`, `borderColor`, `compact`) needs neither.
+
+### Upgrading an earlier Samsung install to 1.2.0
+
+1. Rebuild and reinstall the app (step 7). The app version becomes 1.2.0.
+2. Copy the relay to the Pi and restart it (step 5e, then the restart command above). The older relay drops the appearance settings, so the picture keeps the default look until the relay is updated.
+3. To use the appearance settings, replace the `payload:` of `camera_overlay_show` with the 1.2.0 version in step 9c, check the configuration, restart Home Assistant, and add the settings to your script (step 9g). Re-import the blueprint if you use it.
+4. Optionally, select a **Pause camera overlays** helper in your alert automations (step 9h).

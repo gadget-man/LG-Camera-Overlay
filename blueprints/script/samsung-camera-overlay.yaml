@@ -4,7 +4,7 @@ blueprint:
     Tell the relay which camera to show, then make sure the overlay app is open on an already-on Samsung TV.
     The app keeps the chosen HDMI input full-screen and shows the camera as a picture-in-picture on top.
     If the app is already open it picks the request up within a second, with no relaunch and no black flash.
-    Requires the rest_command snippets from docs/SAMSUNG-TIZEN.md.
+    Requires the rest_command snippets from docs/SAMSUNG-TIZEN.md (the 1.2.0 version, which passes the appearance settings).
   domain: script
   author: MBS Integrations
   source_url: https://github.com/gadget-man/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
@@ -52,6 +52,48 @@ blueprint:
           min: 10
           max: 55
           unit_of_measurement: '%'
+    position:
+      name: Picture position
+      default: top-right
+      selector:
+        select:
+          options:
+            - label: Top right
+              value: top-right
+            - label: Top left
+              value: top-left
+            - label: Bottom right
+              value: bottom-right
+            - label: Bottom left
+              value: bottom-left
+            - label: Centre
+              value: center
+    margin:
+      name: Distance from the screen edge
+      description: Ignored for the centre position.
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 10
+          unit_of_measurement: '% of screen width'
+    border:
+      name: Show border
+      default: true
+      selector:
+        boolean: {}
+    borderColor:
+      name: Border colour
+      description: "Border colour as '#rrggbb'. Leave empty for the default translucent white."
+      default: ''
+      selector:
+        text: {}
+    compact:
+      name: Show camera label
+      description: Show the camera label over the top of the picture on a translucent strip (the LG app's compact mode).
+      default: false
+      selector:
+        boolean: {}
     hdmi:
       name: HDMI input behind the picture
       description: 0 keeps whatever TV source the app finds.
@@ -106,6 +148,11 @@ sequence:
       duration: !input duration
       width: !input width
       hdmi: !input hdmi
+      position: !input position
+      margin: !input margin
+      border: !input border
+      borderColor: !input borderColor
+      compact: !input compact
   - choose:
       - conditions: "{{ launch == 'samsungtv' }}"
         sequence:

@@ -17,7 +17,8 @@ if(!profile){console.log('Add --profile <certificate profile> to package with th
 fs.mkdirSync(dist,{recursive:true});
 const run=spawnSync(tizen,['package','-t','wgt','-s',profile,'-o',dist,'--',stage],{stdio:'inherit',shell:process.platform==='win32'});
 if(run.error)throw Error('Tizen CLI not found; install Tizen Studio or set TIZEN_CLI');
-if(run.status){process.exitCode=run.status;return;}
+// A CLI stopped by a signal has no exit status: treat that as a failure too (as scripts/build.cjs does).
+if(run.status!==0){process.exitCode=run.status===null?1:run.status;return;}
 // tizen install fails without a reason when the package file name contains a space, and the CLI names
 // the file after <name> in config.xml ("Camera Overlay.wgt"), so rename it to a space-free name.
 for(const file of fs.readdirSync(dist))if(file.endsWith('.wgt')&&/\s/.test(file)){

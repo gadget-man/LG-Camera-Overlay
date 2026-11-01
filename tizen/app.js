@@ -20,6 +20,18 @@
   stop();if(pollTimer!==null){clearInterval(pollTimer);pollTimer=null;}
   try{tizen.application.getCurrentApplication().exit();}catch(e){try{window.close();}catch(x){}}
  }
+ /* Panel position, as in the LG app: top, right, bottom, left, transform; "m" is the edge margin. */
+ var places={"top-right":["m","m","auto","auto","none"],"top-left":["m","auto","auto","m","none"],"bottom-right":["auto","m","m","auto","none"],"bottom-left":["auto","auto","m","m","none"],"center":["50%","auto","auto","50%","translate(-50%,-50%)"]};
+ function style(p){
+  // Same request fields as the LG launch blueprint (position, margin, border, borderColor, compact); fps does not apply here.
+  var place=Object.prototype.hasOwnProperty.call(places,p.position)?places[p.position]:places["top-right"],m=p.margin===undefined||p.margin===null||p.margin===""?3:Number(p.margin);
+  if(!isFinite(m)||m<0||m>10||Math.floor(m)!==m)m=3;
+  function edge(v){return v==="m"?m+"vw":v;}
+  var border=!(p.border===false||p.border==="false"),compact=p.compact===true||p.compact==="true";
+  panel.style.top=edge(place[0]);panel.style.right=edge(place[1]);panel.style.bottom=edge(place[2]);panel.style.left=edge(place[3]);panel.style.transform=place[4];
+  panel.style.borderColor=typeof p.borderColor==="string"&&/^#[0-9a-fA-F]{6}$/.test(p.borderColor)?p.borderColor:"rgba(255,255,255,.6)";
+  panel.style.borderWidth=border?"2px":"0";panel.className=compact?"compact":"";
+ }
  function bounded(value,low,high,fallback){value=Number(value);return isFinite(value)&&value>0?Math.max(low,Math.min(high,value)):fallback;}
  function payload(){
   // Optional JSON PAYLOAD when launched through the TV's DEEP_LINK app control.
@@ -69,7 +81,7 @@
  function play(p,mine){
   var url=streamUrl(p),duration=bounded(p.duration,15,90,45);
   active=true;
-  panel.style.display="block";panel.style.visibility="hidden";panel.style.width=bounded(p.width,10,55,25)+"%";
+  style(p);panel.style.display="block";panel.style.visibility="hidden";panel.style.width=bounded(p.width,10,55,25)+"%";
   label.textContent=typeof p.label==="string"?p.label.slice(0,60):"Camera";
   seconds.textContent=String(Math.ceil(duration));status.textContent="Connecting...";
   status.style.color="#a9bac4";message.textContent="Connecting live camera...";message.style.display="block";

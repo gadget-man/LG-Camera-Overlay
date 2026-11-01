@@ -23,7 +23,12 @@ assert.equal(call("POST","/show/"+token+"/lounge",JSON.stringify({camera:"entran
 const got=call("GET","/pending/"+token+"/lounge");assert.equal(got.status,200);assert.equal(got.headers["Access-Control-Allow-Origin"],"*");
 const p=JSON.parse(got.body);assert.equal(p.camera,"entrance");assert.equal(p.duration,30);assert.equal(p.width,55);assert.equal(p.hdmi,1);assert.equal(p.stream,undefined,"Callers must not inject a stream URL");
 assert.equal(call("GET","/pending/"+token+"/lounge").status,204,"A request is consumed once");
+assert.equal(call("POST","/show/"+token+"/lounge",JSON.stringify({camera:"entrance",position:"bottom-left",margin:5,border:"false",borderColor:"#00ff00",compact:true,fps:false})).status,204);
+let q=JSON.parse(call("GET","/pending/"+token+"/lounge").body);assert.equal(q.position,"bottom-left");assert.equal(q.margin,5);assert.equal(q.border,false);assert.equal(q.borderColor,"#00ff00");assert.equal(q.compact,true);assert.equal(q.fps,undefined,"fps does not apply on Samsung");
+assert.equal(call("POST","/show/"+token+"/lounge",JSON.stringify({camera:"entrance",position:"middle",margin:11,border:"yes",borderColor:"red;x",compact:"maybe"})).status,204);
+q=JSON.parse(call("GET","/pending/"+token+"/lounge").body);for(const k of ["position","margin","border","borderColor","compact"])assert.equal(q[k],undefined,"Invalid "+k+" is dropped");
+assert.equal(call("POST","/show/"+token+"/lounge",JSON.stringify({camera:"entrance",margin:0})).status,204);assert.equal(JSON.parse(call("GET","/pending/"+token+"/lounge").body).margin,0,"Zero margin is allowed");
 assert.equal(spawned.length,1,"A show request starts the camera feed before the TV connects");assert(spawned[0].args.includes("-probesize"),"Fast stream probe");
 assert.equal(vm.runInContext("streams.has('entrance')",ctx),true);
 vm.runInContext("pending.set('lounge',{camera:'entrance',sentAt:Date.now()-61000})",ctx);assert.equal(call("GET","/pending/"+token+"/lounge").status,204,"Old requests expire");
-console.log("PASS: Tizen TV skips SSH/devmode, LAN listener, token and TV checks, sanitized one-shot show requests with expiry");
+console.log("PASS: Tizen TV skips SSH/devmode, LAN listener, token and TV checks, sanitized one-shot show requests with expiry, appearance field validation");
