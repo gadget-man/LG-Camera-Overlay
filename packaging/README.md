@@ -1,3 +1,5 @@
+> **LG only.** This packaging builds the LG setup ZIP and the experimental HA OS package. Neither is used for Samsung TVs; Samsung users build the TV app with `npm run build:tizen` ([guide](../docs/SAMSUNG-TIZEN.md)).
+
 # Setup packaging
 
 Run `npm run build:setup` after placing the verified v1.2.0 TV IPK and its checksum manifest in `dist/`. This creates `.build/setup-release/LG-Camera-Overlay-Setup-1.2.0.zip`, a separately named experimental HA OS App ZIP, and SHA256SUMS.txt. It does not upload anything. `npm run build:review` keeps the local-review output names for development.

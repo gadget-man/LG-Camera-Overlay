@@ -1,14 +1,25 @@
-# 1.2.0 roadmap
+# Samsung roadmap
 
-All three planned items are included in 1.2.0. Validation applies only to the setups recorded in [test results](docs/VALIDATION.md).
+Planned or wanted for the Samsung version. What has been tested so far is recorded in [test results](docs/VALIDATION.md).
 
-- [x] Add customization options for the look and feel of the camera overlay (included in 1.2.0).
-- [x] Add a Home Assistant automation blueprint for the Disable feature, allowing users to pause and resume camera overlays (included in 1.2.0).
-- [x] Test whether the camera overlay appears above LG's built-in screensaver and add optional temporary dismissal without permanently disabling screensaver protection.
+## Features
 
-On 31 October, the overlay was not visible above the OLED65B9PLA's active LG screensaver. A separate screen-on test dismissed it and preserved YouTube. The combined dismissal-plus-overlay test also worked, with Launcher already underneath and preserved afterward. The launch blueprint and configurator now offer this as an opt-in setting; other TV models are unverified.
+- [ ] **Hide the picture early from Home Assistant.** Add a "hide now" request to the relay and app, so a dashboard button, a Zigbee button, or a Sky Q state change through a Home Assistant integration can close the picture before it times out. The Sky remote can't reach the TV app directly. BACK on the Samsung remote already works.
+- [ ] Let a priority (doorbell) request replace a picture that's already showing, as it does on LG. At the moment it's shown after the current picture closes.
+- [ ] Optionally keep the TV screen on while a picture shows, if Samsung's screensaver turns out to hide it. Not observed so far.
 
-## Further validation
+## Testing
 
-- [ ] Screensaver dismissal on other LG models and software versions.
-- [ ] HA OS/Supervisor installation, ingress and lifecycle acceptance.
+- [ ] Other Samsung models and years, and other HDMI sources and video modes.
+- [ ] HDMI audio continuing while the picture shows, confirmed separately.
+- [ ] The 1.2.0 appearance settings on a TV (so far checked in a desktop browser only).
+- [ ] Motion, person and doorbell triggers through the alert blueprint, the pause helper and the quiet-hours blueprint.
+- [ ] The blueprint's Samsung-integration launch option, and several TVs with the templated `{{ tv_id }}` URL.
+- [ ] The relay in Docker (`compose.tizen.yaml`), on a Mac, and on a Pi 4 or 5.
+- [ ] Recovery after a relay reboot and a TV power cut, and whether the app keeps working with Developer mode turned off.
+- [ ] What happens when the Samsung certificate expires.
+- [ ] The relay's faster-start FFmpeg options with LG TVs, before any merge towards `main`.
+
+## Known issues
+
+- [ ] The relay on a Raspberry Pi Zero 2 W running Home Assistant stopped answering once and needed a restart. Capture `journalctl` and memory output when it next happens, to find the cause.

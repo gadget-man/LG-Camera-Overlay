@@ -1,46 +1,62 @@
-# LG TV privacy and your network
+# Samsung TV privacy and your network
 
-Updated 24 October 2026. Adapted for Camera Overlay from the [Home Launcher privacy guide](https://github.com/mbsintegrations/LG-TV-HA-Home-Launcher/blob/main/docs/PRIVACY-AND-NETWORK.md).
+Camera Overlay shows your camera locally. It doesn't change any of the Samsung TV's own privacy settings, advertising, viewing-information or voice services, and doesn't block traffic from the TV or its apps.
 
-Camera Overlay displays your camera locally. It does **not** disable LG's advertising, viewing recognition, voice services or device discovery, change privacy agreements, or block traffic from webOS and streaming apps.
+## Samsung privacy settings
 
-## LG privacy settings
+Samsung TVs have optional services such as viewing information (content recognition), interest-based advertising and voice recognition, controlled by agreements you accept on the TV. On recent models they're usually under **Settings → General & Privacy → Terms & Privacy**, but names and menus vary by model, year and region. Installing Camera Overlay doesn't change them. Review them yourself if they matter to you.
 
-In its [published explanation](https://www.lg.com/global/newsroom/news/statements/statement-understanding-privacy-on-lg-smart-tvs/), LG distinguishes device discovery from Automatic Content Recognition (ACR) and nearby Wi-Fi processing. LG says discovery supports connecting compatible devices rather than advertising profiling; separately, nearby Wi-Fi information can support approximate location for enabled ACR services. LG describes ACR, voice recognition and interest-based advertising as optional services controlled by agreements and settings. These are LG's statements, not results of a firmware or network audit by this project.
+## How the Samsung route differs from LG
 
-Review the TV's viewing-information/ACR, personalised advertising, voice settings and accepted agreements. Names vary by model, region and firmware. Installing either Camera Overlay or Home Launcher does not change them. Discovery traffic alone is not proof of surveillance, and a legitimate discovery feature does not settle questions about other data collection.
+The LG version sends video through an encrypted SSH tunnel, and its relay listens only on the computer itself. Samsung TVs can't use SSH, so the Samsung route is simpler and **less protected**:
+
+- The TV app connects straight to the relay over your LAN using plain HTTP and WebSocket. **The camera video and the 64-character token travel unencrypted** between the relay and the TV.
+- The relay listens on a LAN address, so any device on that network can reach it. The token protects the camera routes, but **`/health` answers without the token** (camera IDs and timings, not stream addresses).
+- The token is the only protection, and it's built into the TV app (`.wgt`) and stored in Home Assistant.
+
+On a trusted home network this is a reasonable trade-off. Don't run it on a shared or untrusted network, and never expose the relay to the Internet.
 
 ## Connections Camera Overlay needs
 
-Use these directions when planning firewall rules. Permit established reply traffic; do not open an entire network merely to make one connection work.
+Use these when planning firewall rules. Allow reply traffic, but don't open whole networks just to make one connection work.
 
-| From | To | Purpose |
-|---|---|---|
-| Relay host/container | Each configured LG, TCP 9922 | Persistent authenticated SSH connection carrying the camera's reverse tunnel |
-| Setup computer | Selected LG's Developer Mode services | Initial pairing and app installation; Key Server is needed while retrieving the key |
-| Relay host/container | Configured camera/NVR stream endpoint | RTSP/RTSPS video using the actual stream port; the relay requests RTSP over TCP |
-| Home Assistant | Selected LG's webOS control endpoint | Native LG integration launches and dismisses the overlay; retain its existing pairing/control access |
-| TV app | TV loopback `127.0.0.1:8766` by default | Video through the SSH tunnel; this is not a public LAN listener |
-| Relay host/container | `developer.lge.com`, HTTPS 443 | Optional session checks and renewal, using the privately cached LG session token |
+| From | To | Port | Purpose |
+|---|---|---|---|
+| TV | Relay | TCP 8766 (the `port` setting) | Checks for camera requests and receives video; unencrypted |
+| Home Assistant | Relay | TCP 8766 | Sends camera requests; unencrypted, token in the address |
+| Home Assistant | TV | TCP 8001 | Opens the overlay app |
+| Home Assistant | TV | The Samsung Smart TV integration's ports | TV power state and control, as the [integration](https://www.home-assistant.io/integrations/samsungtv/) requires |
+| Relay | Camera or NVR | The stream port, usually 554 | RTSP over TCP, or RTSPS |
+| Build computer | TV | TCP 26101 | `sdb`, only while installing the app with Developer mode on |
+| Build computer | Samsung's certificate service | HTTPS | Creating the developer certificate, signed in with your Samsung account |
 
-The relay also supports Developer Mode session checks/renewal; preserve the internet access required by that mechanism. TVs may separately need DNS, time, updates, streaming services and local media servers. The [native HA LG integration](https://www.home-assistant.io/integrations/webostv/) documents its setup and discovery requirements.
-
-For this overlay alone, the TV does not need direct access to the camera/NVR or an HA API token. The public IPK contains neither camera credentials nor an HA token. HA supplies a private relay route at launch. If Home Launcher is installed too, retain its separate TV-to-HA connection and protect its token-bearing package.
+The TV doesn't need to reach the camera directly, and the app contains no camera credentials or Home Assistant token. It does contain the relay token and address.
 
 ## Practical network protection
 
-- Put TVs and streaming devices on a media/IoT network with enforced firewall restrictions to trusted computers and storage. Apply rules to IPv4 and IPv6. A different Wi-Fi name or VLAN alone does not enforce isolation; devices on the same VLAN may still reach each other.
-- Allow the specific relay-to-TV, relay-to-camera and HA-to-TV paths above. The relay requires ongoing SSH access, not just access during installation. Limit other developer access to your maintenance computer.
-- Keep the relay bound to loopback. The supplied container needs no published ports, host networking, privileged mode or Docker socket mount. Never forward TV developer ports or the relay from the internet.
-- If casting across networks is needed, forward only the required discovery services and allow the corresponding media/control connections. Do not open all inter-VLAN access. See [Apple's AirPlay network guidance](https://support.apple.com/en-gb/guide/deployment/dep9151c4ace/web) for its discovery cases.
-- Keep firmware updated and review optional privacy features. Network isolation limits local access; it does not stop cloud telemetry on an allowed internet connection or nearby radio discovery. Outbound filtering can affect streaming, updates and Developer Mode renewal.
+- **Isolate the TV.** Put TVs and streaming boxes on a media or IoT network, with firewall rules allowing only the paths above. A separate Wi-Fi name or VLAN doesn't isolate anything without firewall rules. Apply rules to IPv6 as well as IPv4.
+- **Keep camera, relay and TV traffic on trusted networks,** given the unencrypted relay-to-TV path. If they're on different VLANs, allow just TV → relay on the relay port.
+- **Developer mode:** it lets the build computer install apps on the TV over the network. Only the address you entered can connect with `sdb`. Whether the overlay keeps working with Developer mode turned off hasn't been tested yet. If you try it, test an alert afterwards, and report the result. You'll need Developer mode on again to update the app or renew the certificate.
+- **Never forward the relay port, port 8001 or 26101 from the Internet.**
+- **Keep the TV's firmware updated,** and review its privacy options. Network isolation limits local access; it doesn't stop the TV's own Internet traffic.
 
 ## Camera and credential privacy
 
-The relay converts video without camera audio and does not implement video recording or a cloud relay. RTSP traffic is unencrypted on the camera-to-relay path. RTSPS protection depends on the endpoint and FFmpeg's TLS behaviour; do not assume certificate verification simply from the URL scheme. The relay-to-TV tunnel uses encrypted SSH with a pinned host key.
+The relay converts video without audio, and doesn't record or use any cloud service.
 
-Protect `private/`, its backups, SSH keys/passphrases, renewal tokens and camera addresses. The relay's shared token grants access to all configured camera routes; camera/TV IDs are not separate permissions. Treat HA launch URLs, script configuration and traces containing that token as secrets. A process able to read the host's private files or FFmpeg command arguments may obtain stream credentials. There is no encryption-at-rest guarantee.
+**Camera to relay.** RTSP is unencrypted. RTSPS protection depends on the camera and FFmpeg's TLS handling. **Relay to TV:** unencrypted on Samsung (see above).
 
-Do not upload private files or unredacted diagnostic bundles to GitHub or Wiki. If exposed, replace the relay token and affected camera credentials, update HA launch routes, and re-pair affected TV access as necessary. See [Security reporting](../SECURITY.md).
+**Keep these private:**
+- `private/config.json`: camera URLs with passwords, and the token
+- the built `.wgt`: the token and relay address
+- `secrets.yaml` and any Home Assistant traces showing the relay URL
+- your Samsung certificate files and passwords
 
-These are setup recommendations. Installing Camera Overlay makes no router, firewall or LG privacy-setting changes.
+The token grants access to every configured camera route. Camera and TV IDs aren't separate permissions. Anyone who can read the relay computer's files, or its process list while FFmpeg runs, can see the camera credentials.
+
+If any of these leak:
+1. Change the camera passwords.
+2. Generate a new token, then rebuild and reinstall the TV app.
+3. Update `secrets.yaml`, then restart the relay and Home Assistant.
+
+See [security reporting](../SECURITY.md). Installing Camera Overlay makes no router, firewall or TV privacy-setting changes.

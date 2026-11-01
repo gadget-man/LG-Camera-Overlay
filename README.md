@@ -1,116 +1,77 @@
-# LG Camera Overlay
+# Camera Overlay for Samsung TVs
 
-[![Validation](https://github.com/mbsintegrations/LG-Camera-Overlay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mbsintegrations/LG-Camera-Overlay/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/mbsintegrations/LG-Camera-Overlay?cacheSeconds=300&v=1.2.0)](https://github.com/mbsintegrations/LG-Camera-Overlay/releases)
-[![GitHub stars](https://img.shields.io/github/stars/mbsintegrations/LG-Camera-Overlay?style=flat&logo=github)](https://github.com/mbsintegrations/LG-Camera-Overlay)
-[![NAS Docker tested](https://img.shields.io/badge/NAS_Docker-tested-2ea44f)](docs/VALIDATION.md#configurator-and-nas-docker-acceptance-25-october-2026)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-
-[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=flat&logo=paypal&logoColor=white)](https://paypal.me/mwahl1973)
 [![MBS Integrations](https://img.shields.io/badge/MBS_Integrations-mbsintegrations.ie-73dbe2)](https://mbsintegrations.ie)
 
-Show a live camera panel over what you are watching on an LG webOS TV, including native TV apps and HDMI sources such as Apple TV and NVIDIA SHIELD TV Pro. Home Assistant chooses when it appears; BACK or a timer dismisses it. Camera audio is disabled so the underlying app keeps its sound.
+Show a live camera as a small picture-in-picture over what you're watching on a **Samsung Tizen TV**, such as Sky or another box on HDMI. Home Assistant decides when it appears. It closes after your chosen time or when you press BACK, and the HDMI programme carries on underneath, sound included.
 
-> **Samsung Tizen (this branch):** shows the camera as a picture-in-picture over an HDMI source such as a Sky box on Samsung TVs, with the 1.2.0 position, border and compact settings and the shared pause helper. User-confirmed on a 2021 QN94A; other models are untested. It cannot appear over apps built into the TV. See [Samsung Tizen TVs](docs/SAMSUNG-TIZEN.md).
+> **This is the Samsung Tizen branch** of [LG Camera Overlay](https://github.com/mbsintegrations/LG-Camera-Overlay) by MBS Integrations. The LG webOS version, with its setup wizard, release downloads and test record, lives on that project's `main` branch. This branch shares its relay, Home Assistant blueprints and 1.2.0 features, and adds a Samsung TV app.
 
 ## What it does
 
-- Shows a live camera in a small panel over your TV programme, without switching away from it or replacing its sound.
-- Lets Home Assistant show the panel from a dashboard button or an automation, such as a person detection or doorbell press.
-- Closes automatically after your chosen time, or when you press BACK on the TV remote.
-- In 1.2.0: choose the panel's position, border and compact style; pause automatic alerts with a shared HA helper; optionally dismiss LG's screensaver before an alert. See [setup and upgrade instructions](docs/HOME-ASSISTANT.md#updates) and [model-specific test results](docs/VALIDATION.md).
+- Shows a live camera in a picture-in-picture over the HDMI input, with the seconds remaining in its corner. The TV stays on that input, and its sound carries on.
+- Lets Home Assistant show the camera from a dashboard button or an automation, such as a person detection or doorbell press.
+- Closes after the chosen time, counted from when the picture appears, or when you press BACK on the Samsung remote.
+- Lets you set the picture's position (any corner or the centre), size, distance from the edge, border and colour, and an optional camera label, all from Home Assistant without rebuilding anything.
+- Works with the project's alert automation (cooldown, doorbell priority) and its shared **Pause camera overlays** switch, including pausing on a schedule.
 
 ## What you need
 
-- **Home Assistant**, with its built-in **LG webOS TV** integration connected to your TV. No HACS integration is required.
-- **A compatible LG webOS TV**, with LG Developer Mode enabled and the Camera Overlay TV app installed. Check the [tested models and software](#compatibility).
-- **A camera or recorder with an accessible RTSP/RTSPS video stream.** UniFi Protect is tested; other cameras depend on stream compatibility. For automatic alerts, your camera system or another sensor must also send a detection/event to Home Assistant.
-- **An always-on computer or Docker-capable NAS** to run the video relay. Its FFmpeg component converts the camera stream for the TV; the TV app displays it. This can share a suitable Linux/NAS host with Home Assistant, or run on a separate machine. See [hardware and hosting options](docs/HOSTING.md).
-- **Network access between these devices**, plus Node.js 22 or newer on the computer where you open the configurator. The [six-step setup guide](docs/CONFIGURATOR.md) walks you through pairing, camera settings and installation.
+- **A Samsung Tizen TV** with your box on an HDMI input. Apps built into the TV (Netflix on the Samsung itself) can't be overlaid. See [compatibility](#compatibility).
+- **Home Assistant**, with its built-in **Samsung Smart TV** integration. No HACS integration is needed.
+- **A camera or recorder with an RTSP/RTSPS stream**, and its username and password. For automatic alerts, a detection or doorbell signal must also reach Home Assistant. See [how detections work](docs/DETECTION-FLOW.md).
+- **An always-on computer for the relay,** which converts the camera stream for the TV. A Raspberry Pi works, and it can be the one running Home Assistant. See [hosting](docs/HOSTING.md).
+- **A Mac or PC with Tizen Studio** and a **Samsung account**, to build and install the TV app once. You need them again to rebuild it or renew the certificate.
 
-![LG TV - Home Assistant Camera Overlay](docs/images/lg-camera-overlay-header.png)
+**[Start here: Samsung installation guide](docs/SAMSUNG-TIZEN.md)** · [Choose your setup](docs/START-HERE.md) · [Installation reference](docs/INSTALL.md) · [Home Assistant setup](docs/HOME-ASSISTANT.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) · [Test results](docs/VALIDATION.md)
 
-![LG television showing a programme with the Front Left night camera overlay in the upper-right corner](docs/images/lg-camera-overlay-tv.png)
-
-User-confirmed viewing includes native LG apps and successful overlay appearance over **Netflix, Amazon Prime Video and Plex on both Apple TV and NVIDIA SHIELD TV Pro**, connected through HDMI to each of the two tested LG TVs. See the [viewing matrix](docs/VALIDATION.md#user-confirmed-hdmi-viewing-16-october-2026) for the exact combinations and scope.
-
-**[Start here: illustrated configurator guide](docs/CONFIGURATOR.md)** · [Manual Docker routes](docs/START-HERE.md) · [Detailed installation reference](docs/INSTALL.md) · [Releases](https://github.com/mbsintegrations/LG-Camera-Overlay/releases) · [Home Assistant setup](docs/HOME-ASSISTANT.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
+## How it works
 
 ```mermaid
 flowchart LR
-  Camera[RTSP / RTSPS camera] --> Relay[Node relay + system FFmpeg]
-  Relay -->|Pinned SSH reverse tunnel| TV[webOS overlay app / JSMpeg]
-  HA[Home Assistant native LG integration] -->|Launch parameters| TV
+  Camera[RTSP / RTSPS camera] --> Relay[Node relay + FFmpeg]
+  HA[Home Assistant] -->|POST /show| Relay
+  HA -->|Open app, TV port 8001| TV[Samsung TV app / JSMpeg]
+  TV -->|Checks /pending every second| Relay
+  Relay -->|Live video over the LAN| TV
   Events[Person / vehicle / doorbell] --> HA
 ```
 
-The TV app, relay and Home Assistant configuration are three separate installation steps. This uses HA's native **LG webOS TV** integration; no custom HA integration or HACS installation is needed. The relay runs on an always-available computer or locally built Docker container, which can share a Linux/NAS host with Home Assistant. **v1.2.0 adds panel appearance controls and an automatic pause/resume blueprint. The separate HA OS App package is experimental and has NOT been tested.** See [hosting on HA hardware and hardware recommendations](docs/HOSTING.md) for the available options and their limits.
+Samsung doesn't let apps draw over other apps. Instead, the overlay app runs full-screen and uses Samsung's TVWindow API to keep the HDMI input playing **behind** a transparent page, with the camera drawn on top.
 
-## Guided installation
-
-Download **LG-Camera-Overlay-Setup-1.2.0.zip** from [v1.2.0](https://github.com/mbsintegrations/LG-Camera-Overlay/releases/tag/v1.2.0), extract it and open **Start Setup.cmd** on Windows (Node.js LTS 22+ required). Mac/Linux use `sh "Start Setup.command"`. The wizard guides TV pairing and app installation, camera settings, panel preview, HA script creation and private Docker export. The permanent relay still needs Docker or Node/FFmpeg; setup is not an unattended service installer.
-
-![Configurator host selection with sample television preview](docs/images/setup-01-host.png)
-
-**[Follow all six illustrated steps](docs/CONFIGURATOR.md)**. Screenshots use sample data. **HA OS App/ingress has not been tested**; NAS Docker acceptance does not validate it.
-
-## Additional features
-
-For LG privacy settings, camera credentials and recommended network isolation, read [Privacy and network protection](docs/PRIVACY-AND-NETWORK.md). The overlay does not disable LG's underlying viewing-recognition or advertising services.
-
-- Continuous video decoded on a canvas, with a 25–55% width panel and 15–90 second duration.
-- One encoder per visible camera, shared by multiple TVs. Encoding stops when its last viewer leaves.
-- Separate pinned SSH tunnels and reconnects per TV; offline TVs are not woken.
-- Optional Developer Mode session checks and renewal, with bounded, credential-free status.
-- Reusable HA launch and alert blueprints, configurable camera routing, shared cooldown and doorbell priority.
-- Loopback-only relay: no router port forwarding or public camera endpoint.
-
-## What tells it to show a camera?
-
-There are two separate paths: **RTSP/RTSPS provides video; a detection signal in Home Assistant triggers the overlay.** In the operating UniFi reference, Protect's person/vehicle sensors and doorbell events trigger HA rules, which select a camera, apply cooldown/priority and launch the app on already-on LG TVs. The relay does not perform object detection or read zone polygons.
-
-Read [the complete detection flow](docs/DETECTION-FLOW.md) for the UniFi setup, the distinction between camera detections and notification-zone filters, and what other systems must provide to HA. Other camera/NVR integrations, Frigate, MQTT, webhooks or separate sensors are possible trigger sources, but have not been validated by this project.
-
-**Operating reference:** UniFi Protect + HA native integrations + a native relay on an Apple Silicon Mac mini + LG OLED65B9PLA and 65NANO766QA. This installation predates public v1.0.0. The v1.1.0 configurator/relay also passed an actual NAS Docker → HA Test → Living Room LG test on 25 October 2026, including user-confirmed picture/sound and automatic close. See the [tested and operating setup matrix](docs/VALIDATION.md#tested-and-operating-setups) before choosing a deployment.
+- **The app stays open between alerts.** When the time is up, the camera disappears and the HDMI picture carries on. Later alerts appear without the TV's app loading screen.
+- **Video never goes through Home Assistant.** The relay pulls the camera stream and converts it for the TV. Home Assistant only sends "show this camera" and, if needed, opens the app.
+- **The relay starts the camera feed as soon as Home Assistant asks**, and stops it when no TV is watching.
 
 ## Compatibility
 
-Recorded TV software versions:
-
-| LG TV model | TV firmware | webOS SDK version |
+| Samsung TV | Year | Result |
 |---|---|---|
-| OLED65B9PLA | 05.50.00 | 4.10.0 |
-| 65NANO766QA | 04.60.91 | 7.6.0 |
-| 55NANO766QA | 04.60.91 | 7.6.0 |
+| QE55QN94AATXXU (Neo QLED, `21_NIKEM2_QTV`) | 2021 | Working (user-confirmed), with Sky on HDMI 1, the relay on a Raspberry Pi Zero 2 W and Home Assistant in Docker |
 
-These are recorded device values, not minimum requirements. The SDK version is the TV's reported `sdkVersion`; a separate webOS marketing/platform version was not captured. Firmware and SDK values are not interchangeable. See [version evidence](docs/VALIDATION.md#tv-software-version-evidence) for dates and limits.
+Other models are untested. The TVWindow HDMI-behind-the-page method depends on the model and firmware. Please report your results; the [installation guide](docs/SAMSUNG-TIZEN.md#8-test-without-home-assistant) lists the four checks to run. See [test results](docs/VALIDATION.md) for exactly what has and hasn't been tested.
 
-**Community-tested TV:** a user reported the overlay working on **OLED77C2AUA / webOS26 11.2.0-3704** (report received 26 October 2026), including all streaming apps they tested. The webOS version is reproduced as supplied; firmware and SDK values were not separately provided. See [community test results](docs/VALIDATION.md#community-tested-tvs).
+The relay accepts RTSP/RTSPS camera URLs. Other cameras depend on FFmpeg's support and aren't individually certified. There's no cloud relay or recording. Startup takes a couple of seconds and varies with the camera, network and relay computer. The countdown starts only when the picture appears.
 
-The predecessor deployment was physically confirmed on **OLED65B9PLA / SDK 4.10.0** over YouTube and Netflix, and **65NANO766QA / SDK 7.6.0** over Netflix. These are historical observations, not certification of every firmware or this release. See [release validation](docs/VALIDATION.md) for new-build evidence and remaining limits.
+## Security in brief
 
-On 15 October 2026, the user also confirmed that the overlay works on the **OLED65B9PLA** both with **Plex running directly on the LG** and with **Plex running on an Apple TV connected through HDMI**. The Apple TV requires no overlay app; the LG renders the panel above its HDMI picture. These are confirmations of the working installation; the exact package version was not identified in the viewing report.
+The TV app talks to the relay over your home network without encryption. The 64-character token in the app and in Home Assistant is the only protection. Keep the relay off the Internet, and keep the token, the built `.wgt` file and the `private/` folder private. See [Privacy and network protection](docs/PRIVACY-AND-NETWORK.md).
 
-On 16 October 2026, the user reported that the overlay appeared on **both OLED65B9PLA and 65NANO766QA**, testing **Netflix, Amazon Prime Video and Plex on Apple TV and NVIDIA SHIELD TV Pro** through HDMI: all 12 TV/player/service combinations. The overlay runs on the LG, so no overlay software is installed on either HDMI player. This architecture suggests independence from the connected player's app, but the confirmed combinations do not guarantee every HDMI device, video mode or TV firmware. See [test details](docs/VALIDATION.md#user-confirmed-hdmi-viewing-16-october-2026).
+## Next steps
 
-The transparent overlay window flag is not a documented LG compatibility contract. Protected video apps, firmware changes and other TV models can behave differently. Disney+ and other HDMI source/app combinations still require their own viewing checks. Developer Mode is required; root is not.
-
-The relay accepts RTSP/RTSPS camera URLs. UniFi Protect is the original tested source. Other cameras depend on the installed FFmpeg build and are not individually certified. There is no cloud relay or video recording feature. Startup consumes part of the chosen display duration; latency varies with camera stream, network, server and TV.
-
-## Next release
-
-See the [next-release TODO list](TODO.md) for planned additions.
+See the [Samsung TODO list](TODO.md).
 
 ## Project contents
 
 | Path | Purpose |
 |---|---|
-| `source/` | TV app and pinned MIT-licensed JSMpeg player |
-| `relay/` | Portable Node relay and Developer Mode helper |
-| `scripts/` | Pairing import, configuration check and IPK build |
-| `blueprints/` | HA script and automation blueprints |
-| `compose.yaml` | Local Docker build; no published ports |
-| `tests/` | Lifecycle, privacy, configuration and encoder checks |
-| `tooling/` | Isolated official webOS packager; not a relay dependency |
+| `tizen/` | Samsung TV app and the pinned MIT-licensed JSMpeg player |
+| `relay/` | Node relay, shared with the LG version |
+| `scripts/build-tizen.cjs` | Builds and signs the TV app (`npm run build:tizen`) |
+| `blueprints/script/samsung-camera-overlay.yaml` | Home Assistant script blueprint for Samsung TVs |
+| `blueprints/automation/` | Alert and pause/resume blueprints, shared with the LG version |
+| `config.tizen.example.json`, `compose.tizen.yaml` | Relay configuration example and Docker port override |
+| `tests/` | Automated tests, including `tizen-overlay.cjs` and `tizen-relay.cjs` |
+| `source/`, `setup/`, `tooling/`, `packaging/` | LG webOS app, setup wizard and packaging, kept from upstream; not used for Samsung |
 
-Own code is **GPL-3.0-only**. Third-party notices remain under their original licences; see [NOTICE](NOTICE) and [licensing](docs/LICENSING.md). LG, webOS, UniFi and Home Assistant are their respective owners' names; this project is independently maintained.
+Own code is **GPL-3.0-only**. Third-party notices remain under their original licences; see [NOTICE](NOTICE) and [licensing](docs/LICENSING.md). Samsung, Tizen, LG, webOS, Sky and Home Assistant are their respective owners' names; this project is independently maintained and not affiliated with them.

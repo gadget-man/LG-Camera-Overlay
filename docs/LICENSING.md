@@ -1,9 +1,17 @@
 # Licensing and dependency boundaries
 
-Own project code is GPL-3.0-only. Preserve LICENSE and notices when redistributing it. The TV IPK includes LICENSE, NOTICE and the original MIT JSMpeg notice, with the corresponding project source available in the same release. JSMpeg's MIT licence remains unchanged.
+Own project code is GPL-3.0-only. Keep `LICENSE` and the notices when redistributing it.
 
-Runtime npm dependencies are installed from the lockfile and retain their package notices. The official webOS CLI is isolated under `tooling/`; it is required only for building/pairing through that route, not to run the relay. Its bundled transitive dependency audit findings include unfixed advisories. Use it only with trusted source/package inputs, avoid exposing its development server, and review updates upstream. The runtime dependency audit is checked independently in CI.
+**The Samsung TV app** (`tizen/`) includes `LICENSE`, `NOTICE` and the original MIT JSMpeg licence (`tizen/vendor/JSMpeg-LICENSE.txt`). Its `jsmpeg.min.js` is byte-for-byte the same build as the LG app's. JSMpeg's MIT licence is unchanged. This project doesn't publish a built `.wgt`. Each one is built by its user, because it contains that user's relay token and is signed with their own Samsung certificate. If you share a built package with someone, include the project source or say where to get it, as GPL-3.0 requires. Share it only if you're happy to share the token inside it.
 
-On 31 October 2026, the latest official CLI (3.2.6) still pinned dependencies through its own `npm-shrinkwrap.json`; a compatible `npm audit fix` did not resolve its 18 reported findings, including one critical advisory. These are not a clean tooling audit. The relay/runtime audit reported no vulnerabilities. The supplied TV IPK avoids requiring end users to build it themselves; keep CLI use local and limited to trusted inputs.
+**Tizen Studio**, the `tizen` and `sdb` tools, and the Samsung Certificate Extension are Samsung's software under Samsung's terms. They aren't included in or redistributed by this project. You install them yourself from Samsung.
 
-No FFmpeg executable or prebuilt container image is distributed by this project. The Dockerfile instructs the user to install Debian's FFmpeg package during their own local build. FFmpeg licensing depends on its build configuration: [FFmpeg's legal page](https://ffmpeg.org/legal.html) explains the LGPL/GPL distinctions and source obligations. If you redistribute your built container or an FFmpeg binary, retain the relevant notices and provide the corresponding source/build information required for that exact build and its dependencies. The project GPL licence does not discharge those obligations.
+**Runtime npm dependencies** are installed from the lockfile and keep their own notices. `npm audit --omit=dev` reported no vulnerabilities on 1 November 2026.
+
+**FFmpeg:** the project doesn't distribute an FFmpeg executable or a container image.
+- The Docker route installs Debian's FFmpeg package during your own local build.
+- The Raspberry Pi route in the guide downloads a third-party static build (johnvansickle.com) to your own computer.
+
+FFmpeg's licence depends on how it was built; [FFmpeg's legal page](https://ffmpeg.org/legal.html) explains the LGPL/GPL distinction. If you redistribute an FFmpeg binary or a built container, keep its notices and provide the source and build information its licence requires. This project's GPL licence doesn't cover that for you.
+
+**LG tooling:** the `tooling/` folder contains the official webOS CLI used by the LG version. It's not needed for Samsung and isn't used by the relay. Its own dependency-audit limits are described in the [upstream licensing notes](https://github.com/mbsintegrations/LG-Camera-Overlay/blob/main/docs/LICENSING.md).

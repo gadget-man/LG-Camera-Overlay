@@ -96,7 +96,7 @@ Then get the code:
 
 ```bash
 cd ~
-git clone --branch samsung-tizen https://github.com/gadget-man/LG-Camera-Overlay.git
+git clone --branch samsung-tizen https://github.com/mbsintegrations/LG-Camera-Overlay.git
 cd LG-Camera-Overlay
 npm ci --ignore-scripts
 mkdir -p private logs
@@ -377,7 +377,7 @@ The appearance lines use defaults, so scripts that don't set them still work. An
 **9g. Create the script.** Either import the blueprint and create a script from it:
 
 ```text
-https://github.com/gadget-man/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
+https://github.com/mbsintegrations/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
 ```
 
 Choose the Samsung media player, TV ID `lounge`, camera ID `outside`, and the `TV Camera Overlay` switch, and leave **How to open the TV app** on **TV network API**.
@@ -450,6 +450,8 @@ For motion or a doorbell, copy it and change the trigger, for example `entity_id
 | **Pause camera overlays** in the alert automation | Alerts paused | Automatic alerts only; buttons still work |
 
 Use either or both.
+
+On Samsung, a priority (doorbell) request that arrives while a picture is showing is displayed after that picture closes, within 60 seconds of the request, rather than replacing it immediately. See [Home Assistant setup](HOME-ASSISTANT.md#add-optional-automatic-alerts).
 
 **9i. Add the switch and button to a dashboard** (an **Entities** card), then test:
 

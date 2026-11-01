@@ -19,6 +19,7 @@
   - The Samsung guide covers the shared **Pause camera overlays** helper and the quiet-hours blueprint, and how they differ from the Samsung script's own on/off switch.
   - `npm run build:tizen` reports failure when the Tizen CLI is stopped by a signal, as `build.cjs` does.
   - Samsung app version 1.2.0.
+- Samsung documentation throughout this branch: README, setup choice, installation reference, Home Assistant, hosting, troubleshooting, detection flow, privacy and network, validation, licensing, security and roadmap are rewritten for Samsung TVs. LG-only features (setup wizard, Developer Mode SSH pairing, screensaver dismissal, Home Launcher, HA OS package) now point to their Samsung equivalents or to upstream. The privacy and security pages state that the Samsung relay-to-TV path is unencrypted and that `/health` is reachable on the LAN. Guide and blueprint links point at the upstream `samsung-tizen` branch.
 
 ## 1.2.0 — 31 October 2026
 

@@ -1,51 +1,47 @@
-# Hosting on Home Assistant hardware
+# Hosting the relay
 
-Ready to install? Use the [illustrated configurator](CONFIGURATOR.md). [Choose your setup](START-HERE.md) provides step-by-step Docker routes for Windows, Mac and Linux, with HA on the same computer or elsewhere.
+Ready to install? See [Choose your setup](START-HERE.md) and the [installation guide](SAMSUNG-TIZEN.md).
 
-You do not necessarily need another computer. The Node/FFmpeg relay can share a suitable host with Home Assistant, provided there is enough spare capacity for video decoding and encoding. The TV app still runs on the LG, and HA still uses its native LG integration to launch it.
+The relay is the always-on part: a small Node.js program plus FFmpeg that pulls the camera stream, converts it and sends it to the TV. It can share a computer with Home Assistant if there's spare memory and CPU. For Samsung TVs it must listen on your LAN, because the TV app connects to it directly.
 
-## Choose the installation path
+## Choose where to run it
 
-| Existing setup | How to host the relay | Current project status |
+| Existing setup | How to host the relay | Status for Samsung |
 |---|---|---|
-| HA Container on Linux or a Docker-capable NAS | Run the supplied Compose service as a separate container on the same host | Available now; follow [installation step 6](INSTALL.md#6-docker--nas-option) |
-| HA OS in a virtual machine | Run the relay in a separate Linux VM or container on the underlying host, if supported | Existing relay can be used; allocate resources separately from the HA VM |
-| HA OS installed directly on the machine | Package the relay as an HA App (formerly add-on), managed by Supervisor | Experimental local App package provided; **NOT TESTED** on HA OS/Supervisor; no one-click App repository |
-| Another always-on computer | Run the native relay or a locally built Docker container | Available now; useful when HA hardware has little spare capacity |
+| Home Assistant in Docker on a Raspberry Pi or other Linux computer | Native relay as a systemd service on the same computer | **Tested** on a Raspberry Pi Zero 2 W, with limits (below) |
+| Linux computer or NAS with Docker | The supplied Compose service plus `compose.tizen.yaml` | Not yet tested with a Samsung TV |
+| Home Assistant OS in a virtual machine | The relay on the host or in a separate VM or container, not inside the HA VM | Not yet tested |
+| Home Assistant OS installed directly on its hardware | Use another computer for the relay | HA OS doesn't let you install the relay, and the project's experimental HA OS package is LG-only and untested |
+| Another always-on computer | Native relay or Docker | Works the same way; useful when the Home Assistant machine is small |
 
-HA OS supports Apps; HA Container does not provide the App system and requires you to manage sibling services yourself. See the official [installation types](https://www.home-assistant.io/installation/#about-installation-types). Do not install Node/FFmpeg inside HA Core's container or treat a terminal App as a permanent relay host. The supplied Compose instructions target a host you manage, not the HA OS host shell.
+Don't install Node or FFmpeg inside Home Assistant's own container.
 
-The experimental HA OS App includes a manifest, ingress setup UI and persistent private storage, but **has not been tested on HA OS or Supervisor**. Both `amd64` and `aarch64` still need App installation, ingress and lifecycle validation. The successful NAS Docker test is not evidence for this App route. See the official [App configuration documentation](https://developers.home-assistant.io/docs/apps/configuration/).
+## Hardware
 
-## Hardware requirements and recommendations
+**There's no benchmarked minimum.** The tested installation and these starting points are a guide, not a capacity rating.
 
-**There is no benchmarked minimum hardware specification yet.** The following are conservative starting recommendations for trials, not guaranteed capacity ratings or a reason to replace a working host.
+| Host | Experience so far |
+|---|---|
+| Raspberry Pi Zero 2 W (512 MB), also running Home Assistant in Docker | **Works, but at the limit.** About 90 MB of memory was available before the relay started, with swap nearly full. The relay stopped answering once during testing and needed a restart; the cause wasn't captured. The setup in the guide makes the kernel stop the relay before Home Assistant if memory runs out |
+| Raspberry Pi 4 or 5, 2 GB or more | Not tested; the more comfortable Pi choice |
+| x86 mini-PC or NAS, 4 cores, 8 GB | Not tested with Samsung; the upstream project's suggested starting point for a shared host |
 
-| Use | Suggested starting point | Qualification |
-|---|---|---|
-| One active camera on a shared HA/relay host | Modern 64-bit x86 mini-PC or NAS, four CPU cores, 8 GB total RAM, SSD and wired Ethernet | Aim to leave roughly two cores' worth of CPU headroom and 1 GiB available RAM for a one-camera trial, beyond HA and other services; measure actual demand |
-| Existing always-on Mac | Reuse it if it has spare CPU/RAM | Native Apple Silicon operation has been exercised; this does not establish a minimum Mac model or capacity |
-| Raspberry Pi 5 with 4 or 8 GB RAM | Experimental candidate with cooling and a low-resolution camera substream, using a managed Linux/Docker host | ARM64 Docker and physical TV operation on Pi have not been validated; the experimental HA OS App is untested |
-| HA Green or another small, busy HA appliance | Prefer an existing external relay host | No project transcoding benchmark or tested HA OS App is available for these devices |
-| Several different cameras visible at once | Start with a larger host or keep the relay separate from HA | Measure each additional camera under normal household load; there is no certified camera-count limit |
+If you're buying hardware, don't plan around a Pi Zero 2 W. If you already have one, try it with a low-resolution camera sub-stream and keep an eye on memory.
 
-Prefer trying an existing suitable NAS or computer before buying hardware. For a new shared host, the x86/8 GB/SSD starting point above offers a more practical validation target than sizing to HA's own minimum requirements. HA's published minimum describes HA itself, not the extra video workload here.
+The relay needs Node.js 22 or newer and FFmpeg with the `mpeg1video` encoder. The guide uses a static FFmpeg build for the Pi; Docker supplies its own. It needs no GPU and no Internet-facing port. It doesn't record video, so disk use is just the software and logs.
 
-The runtime needs Node.js 22 or later and FFmpeg; the Docker build supplies them. It needs writable private configuration/log storage and network access to the cameras and each TV's Developer Mode SSH service. No GPU or public inbound port is required. The project does not record video, so camera recordings do not determine its disk requirement; allow space for the OS, container images, updates and log retention.
+## What determines the load
 
-## What determines load
+- Output is 768×432 at 25 fps, MPEG-1. A 4K or HEVC camera stream costs much more to decode without improving the picture, so use a sub-stream.
+- One FFmpeg runs per camera being shown. TVs watching the same camera share it.
+- **FFmpeg starts as soon as Home Assistant sends a request,** so the stream is ready when the TV connects. It stops when no TV is watching, at the latest 20 seconds after the request if no TV connects, and never runs longer than 95 seconds.
+- Decoding and encoding are in software. Hardware acceleration isn't implemented on Linux.
+- The Docker service has a 512 MiB memory limit. That's a configured cap, not a measured requirement.
 
-- Output is 768×432 at 25 fps, encoded as MPEG-1. Use a camera medium/substream first; decoding a 4K or HEVC input can add considerable work without improving the output resolution.
-- One encoder runs per distinct active camera. Multiple TVs watching the same camera share that encoder, although network/tunnel work still increases. The encoder stops when its last viewer leaves.
-- Linux currently uses software decoding and encoding. Intel Quick Sync/VAAPI acceleration is not implemented; do not buy a GPU expecting it to be used. Optional macOS VideoToolbox decoding does not eliminate encoding work.
-- The supplied Compose service has a **512 MiB memory cap**. That is a configured limit, not a measured minimum or a guarantee that every input fits. The 1 GiB headroom recommendation above does not change this cap. Review measured usage before deliberately adjusting it.
-- FFmpeg's encoder thread setting is not a CPU quota. Decoding, filtering and other processes can consume additional CPU. Sharing hardware also means relay and HA compete during backups and other busy periods.
+## Check a shared host before relying on it
 
-## Validate before relying on a shared host
-
-1. Begin with one camera substream and manual launches in a test environment. Keep automatic alerts disabled until acceptance is complete.
-2. Observe whole-host CPU, available RAM, temperature/throttling and HA responsiveness, plus `docker stats` for the relay container. Check for restarts or out-of-memory kills. Container-only readings omit other host workloads.
-3. Verify sustained moving video, startup delay, underlying audio, BACK and timer dismissal. Repeat while the host is doing its normal work and with the intended number of distinct cameras.
-4. Confirm encoders exit after viewing ends and check restart/reconnect behavior during a planned test. If HA responsiveness or video suffers, use a lighter source, reduce concurrent cameras or move the relay to another host.
-
-Linux x86-64 CI has exercised the container with real FFmpeg and a synthetic video source, using simulated SSH. Native Mac operation and physical LG viewing have separate evidence. An actual NAS-container-to-TV route, ARM64 Docker operation and an HA OS App have not been validated. See [the validation record](VALIDATION.md); a successful container build alone does not prove those deployment paths.
+1. Start with one camera sub-stream and manual tests. Leave automatic alerts off.
+2. While a picture is showing, check `free -m` and the CPU load, and that Home Assistant still responds. Afterwards, check FFmpeg has stopped: `pgrep -a ffmpeg` should print nothing about 30 seconds after the picture closes.
+3. Look for out-of-memory kills: `journalctl -k | grep -i "out of memory"`.
+4. Repeat while the host is busy, for example during a Home Assistant backup.
+5. If Home Assistant slows down or the relay stops answering, use a lighter camera stream or move the relay to a bigger computer.

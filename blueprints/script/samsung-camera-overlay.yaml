@@ -7,7 +7,7 @@ blueprint:
     Requires the rest_command snippets from docs/SAMSUNG-TIZEN.md (the 1.2.0 version, which passes the appearance settings).
   domain: script
   author: MBS Integrations
-  source_url: https://github.com/gadget-man/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
+  source_url: https://github.com/mbsintegrations/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
   homeassistant:
     min_version: '2024.10.0'
   input:
