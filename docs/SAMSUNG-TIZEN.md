@@ -96,7 +96,7 @@ Then get the code:
 
 ```bash
 cd ~
-git clone --branch samsung-tizen https://github.com/mbsintegrations/LG-Camera-Overlay.git
+git clone --branch samsung-tizen-tested https://github.com/gadget-man/LG-Camera-Overlay.git
 cd LG-Camera-Overlay
 npm ci --ignore-scripts
 mkdir -p private logs
@@ -124,7 +124,7 @@ Edit `private/config.json` on the build computer. It is copied to the relay comp
 
 - **Token:** generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. It is built into the TV app, so if you change it you must rebuild the app and update Home Assistant.
 - **Camera URL:** most cameras need the username and password in the URL. A `401 Unauthorized` error means they are missing or wrong. If the password contains `@ : / # ? % & +` or spaces, encode it first with `node -p "encodeURIComponent('PASSWORD')"`. Use a sub-stream or medium-quality stream if the camera has one: the relay scales to 768×432 anyway, and a 4K stream only adds CPU load.
-- **`hdmi`:** the input to keep behind the picture (Sky on HDMI 1 → `1`). `0` keeps whatever source the app finds.
+- **`hdmi`:** the input to keep behind the picture (EG. Sky on HDMI 1 → `1`). `0` keeps whatever source the app finds.
 - **IDs** must start with a lowercase letter and use only lowercase letters, digits or underscores. LG TVs (`"platform": "webos"`, the default) can sit in the same file and keep using SSH.
 
 Check the camera stream works from the build computer (needs FFmpeg there), or wait and do it on the Pi in step 5:
@@ -139,7 +139,7 @@ The camera password ends up in `private/config.json` (mode 600) and in your shel
 
 The relay must run all the time, so put it on an always-on machine rather than the build computer. These steps download everything on the build computer and copy it across, so the Pi never runs `npm install` or unpacks large archives, which can exhaust a small Pi's memory.
 
-> **Raspberry Pi Zero 2 W (512 MB):** it works, but only just when it also runs Home Assistant. The tested Pi had about 90 MB available before the relay started, and the relay stopped answering once during testing; restarting the service recovered it. A Pi 4 or 5, or any machine with 1 GB or more free, is a safer home for the relay. The service below makes the kernel kill the relay before Home Assistant if memory runs out.
+> **Raspberry Pi Zero 2 W (512 MB):** it works, but only just when it also runs Home Assistant. The tested Pi had about 90 MB available before the relay started, and the relay occasionally stopped answering once during testing; restarting the service recovered it. A Pi 4 or 5, or any machine with 1 GB or more free, is a safer home for the relay. The service below makes the kernel kill the relay before Home Assistant if memory runs out.
 
 **5a. Check the Pi.** On the build computer:
 
@@ -234,9 +234,9 @@ echo 'export PATH="$HOME/tizen-studio/tools:$HOME/tizen-studio/tools/ide/bin:$PA
 **6b. Install the extensions.** Open **Package Manager** and, under **Extension SDK**, install **TV Extensions** and **Samsung Certificate Extension**.
 
 - **Close Tizen Studio first.** If it is open, the extension install fails with an error dialog whose text can be unreadable (white on white). Turning on **Invert colours** in macOS Accessibility settings makes it readable.
-- If **Samsung Certificate Extension** is not listed, check the extension is activated in Package Manager's configuration, then restart Package Manager.
+- If **Samsung Certificate Extension** is not listed, check the extension is activated in Package Manager's configuration, then restart Package Manager. (Settings wheel near the top right hand corner of the package manager section)
 
-**6c. Turn on Developer mode on the TV.** Open **Apps**, press `1 2 3 4 5` on the remote, switch **Developer mode** on, enter the build computer's IP address (`192.0.2.50`, not the relay's), then turn the TV off at the mains for 30 seconds. A restart from standby often does not apply it.
+**6c. Turn on Developer mode on the TV.** Open **Apps**, quickly press `1 2 3 4 5` on the remote, switch **Developer mode** on, enter the build computer's IP address (`192.0.2.50`, not the relay's), then turn the TV off at the mains for 30 seconds, or by holding down the tv power button until the Samsung Logo Appears. A restart from standby often does not apply it.
 
 Check the TV took the setting. This also shows the model name:
 
@@ -377,7 +377,7 @@ The appearance lines use defaults, so scripts that don't set them still work. An
 **9g. Create the script.** Either import the blueprint and create a script from it:
 
 ```text
-https://github.com/mbsintegrations/LG-Camera-Overlay/blob/samsung-tizen/blueprints/script/samsung-camera-overlay.yaml
+https://github.com/gadget-man/LG-Camera-Overlay/blob/samsung-tizen-tested/blueprints/script/samsung-camera-overlay.yaml
 ```
 
 Choose the Samsung media player, TV ID `lounge`, camera ID `outside`, and the `TV Camera Overlay` switch, and leave **How to open the TV app** on **TV network API**.
